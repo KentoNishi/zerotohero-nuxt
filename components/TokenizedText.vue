@@ -182,8 +182,8 @@ export default {
 };
 </script>
 <style>
-.tokenized-text.show-pinyin {
-  line-height: 2;
+.tokenized-text.show-pinyin .word-block {
+  padding-top: 0.5em; /* Allow extra space for ruby text */
 }
 .annotate-input {
   width: 100%;
