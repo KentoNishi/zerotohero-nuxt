@@ -296,6 +296,11 @@ export default {
           component: "./pages/_l1/_l2/gutenberg.vue",
         },
         {
+          name: "l1-l2-chinese-new-levels-graphic",
+          path: "/:l1/:l2/explore/new-levels-graphic",
+          component: "./pages/_l1/_l2/chinese/new-levels-graphic.vue",
+        }, // Link shared via Reddit https://www.reddit.com/r/ChineseLanguage/comments/mkvq3j/new_and_existing_hsk_vocabulary_compared/
+        {
           name: "l1-l2-chinese-separable",
           path: "/:l1/:l2/separable/:method?/:args?",
           component: "./pages/_l1/_l2/chinese/separable.vue",
