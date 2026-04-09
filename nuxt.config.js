@@ -1,3 +1,4 @@
+// nuxt.config.js
 import { DIRECTUS_URL } from "./lib/utils";
 
 let popularPaths = `/
@@ -388,6 +389,22 @@ export default {
       routes.forEach(route => {
         route.props = true; // Enable props throughout
         route.path = route.path?.replace('/:l2?', '/:l2'); // Make sure l2 is required
+      });
+
+      // Legacy redirect support for external links that were shared before
+      routes.push({
+        path: '/en/zh/textbooks-workbooks',
+        name: 'textbooks-workbooks',
+        component: resolve(__dirname, 'pages/index.vue'), // A component is strictly required to compile
+        beforeEnter(to, from, next) {
+          if (typeof window !== 'undefined') {
+            // Hard redirect to the external URL on the client
+            window.location.replace('https://www.chinesezerotohero.com/textbooks-workbooks/');
+          } else {
+            // Allow Nuxt to generate the static file without crashing
+            next();
+          }
+        }
       });
     },
   },
