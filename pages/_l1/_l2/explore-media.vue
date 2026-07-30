@@ -39,18 +39,6 @@
           </client-only> -->
           <div class="media-section">
             <h3 class="media-seaction-heading">
-              {{ $t('Continue Watching') }}
-            </h3>
-            <WatchHistoryComp
-              :limit="12"
-              :l2="$l2"
-              :showClear="false"
-              :showDate="false"
-              view="carousel"
-            />
-          </div>
-          <div class="media-section">
-            <h3 class="media-seaction-heading">
               {{ $t('Recommended') }}
             </h3>
             <YouTubeVideoList
