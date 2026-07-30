@@ -14,7 +14,10 @@ const buildIndex = (l2, state) => {
   let formIndex = {}
   let idIndex = {}
   for (let savedWord of state.savedWords[l2]) {
-    for (let form of savedWord.forms) {
+    // Some entries (e.g. LLM-saved words from mobile) lack a forms array.
+    // Fall back to head wrapped in an array, or an empty array as last resort.
+    let forms = savedWord.forms || (savedWord.head ? [savedWord.head] : [])
+    for (let form of forms) {
       formIndex[form] = [savedWord].concat(formIndex[form] || [])
     }
     idIndex[savedWord.id] = savedWord
