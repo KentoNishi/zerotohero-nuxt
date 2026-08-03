@@ -1,5 +1,7 @@
 // /store/savedWords.js
 import { groupArrayBy, logError } from '../lib/helper'
+import axios from 'axios'
+import { PYTHON_SERVER } from '../lib/utils'
 
 export const state = () => {
   return {
@@ -172,35 +174,115 @@ export const actions = {
       commit('IMPORT_WORDS_FROM_JSON', json)
     }
   },
-  add({ dispatch, commit }, { l2, word, wordForms, context }) {
+
+  // Fetch saved words from Flask (Supabase row API — SPEC-034).
+  // The server is the source of truth for logged-in users; this replaces the
+  // old Directus saved_words blob import in plugins/directus.js.
+  async fetchFromFlask({ commit }) {
+    if (!$nuxt.$auth.loggedIn) return
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    try {
+      const res = await axios.get(`${PYTHON_SERVER}saved-words`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.data && res.data.words) {
+        commit('IMPORT_WORDS_FROM_JSON', JSON.stringify(res.data.words))
+      }
+    } catch (err) {
+      logError(err)
+    }
+  },
+
+  async add({ dispatch, commit }, { l2, word, wordForms, context }) {
     commit('ADD_SAVED_WORD', { l2, word, wordForms, context })
-    dispatch('push')
+    if (!$nuxt.$auth.loggedIn) return
+    const savedWord = {
+      id: word.id,
+      forms: [...wordForms],
+      date: Date.now(),
+      context // { form, text, starttime = undefined, youtube_id = undefined }
+    }
+    await dispatch('pushWord', { l2, word: savedWord })
   },
-  importWords({ commit, dispatch }, csv) {
+
+  async importWords({ commit, dispatch, state }, csv) {
     commit('IMPORT_WORDS', csv)
-    dispatch('push')
+    if (!$nuxt.$auth.loggedIn) return
+    // Bulk import: push every word currently in the store. The server merges
+    // idempotently (forms/instances union), so repeats are safe.
+    const items = []
+    for (let l2 in state.savedWords) {
+      for (let word of state.savedWords[l2]) {
+        items.push({ l2, word })
+      }
+    }
+    await dispatch('pushWords', items)
   },
+
   importFromJSON({ commit, dispatch }, json) {
     commit('IMPORT_WORDS_FROM_JSON', json)
   },
-  remove({ commit, dispatch }, options) {
+
+  async remove({ commit, dispatch }, options) {
     commit('REMOVE_SAVED_WORD', options)
-    dispatch('push')
-  },
-  removeAll({ commit, dispatch }, options) {
-    commit('REMOVE_ALL_SAVED_WORDS', options)
-    dispatch('push')
-  },
-  async push({ commit, state, rootState }) {
     if (!$nuxt.$auth.loggedIn) return
-    let user = rootState.auth.user
+    const word = options.word || {}
+    const wordId = word.id || (word.saved && word.saved.id)
+    if (wordId) await dispatch('deleteWord', { l2: options.l2, wordId })
+  },
+
+  async removeAll({ commit, dispatch, state }, options) {
+    const l2 = options && options.l2
+    const ids = []
+    if (l2) {
+      ids.push(...(state.savedWords[l2] || []).map(w => w.id))
+    } else {
+      // No l2 → the mutation clears every language; delete all of them server-side.
+      for (let lang of Object.values(state.savedWords)) {
+        ids.push(...(lang || []).map(w => w.id))
+      }
+    }
+    commit('REMOVE_ALL_SAVED_WORDS', options)
+    if (!$nuxt.$auth.loggedIn) return
+    for (let wordId of ids) {
+      await dispatch('deleteWord', { l2, wordId })
+    }
+  },
+
+  async pushWord({}, { l2, word }) {
+    if (!$nuxt.$auth.loggedIn) return
     let token = $nuxt.$auth.strategy.token.get()
-    let dataId = this.$auth.$storage.getUniversal('dataId');
-    if (user && user.id && dataId && token) {
-      token = token.replace('Bearer ', '')
-      let payload = { saved_words: localStorage.getItem('zthSavedWords') }
-      let path = `items/user_data/${dataId}?fields=id`
-      await this.$directus.patch(path, payload)
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    try {
+      await axios.put(`${PYTHON_SERVER}saved-words`, { l2, word }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    } catch (err) {
+      logError(err)
+    }
+  },
+
+  async pushWords({ dispatch }, items) {
+    for (let item of items) {
+      await dispatch('pushWord', item)
+    }
+  },
+
+  async deleteWord({}, { l2, wordId }) {
+    if (!$nuxt.$auth.loggedIn) return
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    try {
+      await axios.delete(
+        `${PYTHON_SERVER}saved-words/${encodeURIComponent(l2)}/${encodeURIComponent(wordId)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+    } catch (err) {
+      logError(err)
     }
   }
 }
@@ -249,4 +331,3 @@ export const getters = {
     }
   }
 }
-
