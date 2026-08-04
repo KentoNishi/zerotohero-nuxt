@@ -60,25 +60,26 @@ export const actions = {
 
     const languageCode = typeof l2 === 'string' ? l2 : l2?.code;
     if (!languageCode) return;
+    const cleanToken = token.replace(/^Bearer\s+/i, "");
 
     try {
-      const response = await axios.post(`${PYTHON_SERVER}user-channel-preferences`, {
-        user_id: user.id,
-        l2: languageCode,
-      });
+      const response = await axios.get(
+        `${PYTHON_SERVER}channel-preferences?l2=${encodeURIComponent(languageCode)}`,
+        { headers: { Authorization: `Bearer ${cleanToken}` } }
+      );
 
       if (response?.status !== 200) {
         logError('Error loading channel preferences', response);
         return null;
       }
 
-      const preferences = response.data || [];
+      const preferences = response.data?.preferences || [];
       const subscribed = [];
       const notInterested = [];
 
       preferences.forEach((item) => {
-        if (item?.status === 'subscribed') subscribed.push(item.channel_id);
-        if (item?.status === 'not_interested') notInterested.push(item.channel_id);
+        if (item?.status === 'subscribed') subscribed.push(item.channelId);
+        if (item?.status === 'not_interested') notInterested.push(item.channelId);
       });
 
       commit('SET_SUBSCRIBED_CHANNELS', subscribed);
@@ -107,14 +108,14 @@ export const actions = {
 
       const languageCode = typeof l2 === 'string' ? l2 : l2?.code;
       if (!languageCode) return null;
+      const cleanToken = token.replace(/^Bearer\s+/i, "");
 
       try {
-        const response = await axios.post(`${PYTHON_SERVER}save-channel-preference`, {
-          user_id: user.id,
-          channel_id: channelId,
-          l2: languageCode,
-          status: 'neutral',
-        });
+        const response = await axios.put(
+          `${PYTHON_SERVER}channel-preferences`,
+          { channelId, l2: languageCode, status: 'neutral' },
+          { headers: { Authorization: `Bearer ${cleanToken}` } }
+        );
 
         if (response?.status !== 200 && response?.status !== 201) {
           logError('Error clearing channel preference', response);
@@ -140,14 +141,14 @@ export const actions = {
 
     const languageCode = typeof l2 === 'string' ? l2 : l2?.code;
     if (!languageCode) return null;
+    const cleanToken = token.replace(/^Bearer\s+/i, "");
 
     try {
-      const response = await axios.post(`${PYTHON_SERVER}save-channel-preference`, {
-        user_id: user.id,
-        channel_id: channelId,
-        l2: languageCode,
-        status,
-      });
+      const response = await axios.put(
+        `${PYTHON_SERVER}channel-preferences`,
+        { channelId, l2: languageCode, status },
+        { headers: { Authorization: `Bearer ${cleanToken}` } }
+      );
 
       if (response?.status !== 200 && response?.status !== 201) {
         logError('Error saving channel preference', response);
