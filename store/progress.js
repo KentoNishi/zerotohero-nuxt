@@ -1,4 +1,6 @@
 import { logError } from '../lib/helper'
+import axios from 'axios'
+import { PYTHON_SERVER } from '../lib/utils'
 
 export const DEFAULT_LEVEL = 1
 export const DEFAULT_WEEKLY_HOURS = 7
@@ -93,33 +95,57 @@ export const actions = {
     if (!state.progressLoaded) commit('LOAD')
     // Data from the server is loaded via directus.js's fetchOrCreateUserData()
   },
+  async fetchFromFlask({ commit }) {
+    if (!$nuxt.$auth.loggedIn) return
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    try {
+      const res = await axios.get(`${PYTHON_SERVER}progress`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.data && res.data.progress) {
+        commit('IMPORT_FROM_JSON', JSON.stringify(res.data.progress))
+      }
+    } catch (err) {
+      logError(err, 'progress.js: fetchFromFlask()')
+    }
+  },
   async importFromJSON({ commit }, json) {
     commit('IMPORT_FROM_JSON', json)
   },
   setLevel({ dispatch, commit }, { l2, level }) {
     commit('SET_LEVEL', { l2, level })
-    dispatch('push')
+    dispatch('pushL2', { l2, progress: state.progress[l2.code] })
     // Dispatch shows/loadRecommendedVideos action after setting the level
     dispatch('shows/loadRecommendedVideos', { userId: this.$auth.$storage.getUniversal('userId'), l2, level, clear: true }, { root: true })
   },
   setWeeklyHours({ dispatch, commit }, { l2, weeklyHours }) {
     commit('SET_WEEKLY_HOURS', { l2, weeklyHours })
-    dispatch('push')
+    dispatch('pushL2', { l2, progress: state.progress[l2.code] })
   },
   removeL2Progress({ dispatch, commit }, { l2 }) {
     commit('REMOVE_L2_PROGRESS', { l2 })
-    dispatch('push')
+    if (!$nuxt.$auth.loggedIn) return
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    axios.delete(`${PYTHON_SERVER}progress/${encodeURIComponent(l2.code)}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).catch((err) => logError(err, 'progress.js: removeL2Progress()'))
   },
   async fetchProgressFromServer() {
     if (!$nuxt.$auth.loggedIn) return
-    let dataId = this.$auth.$storage.getUniversal('dataId');
-    let path = `items/user_data/${dataId}?fields=id,progress`
-    let res = await this.$directus.get(path)
-      .catch(async (err) => {
-        logError(err, 'progress.js: fetchProgressFromServer()')
-      })
-    if (res && res.data && res.data.data) {
-      let progress = JSON.parse(res.data.data.progress)
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return false
+    token = token.replace(/^Bearer\s+/i, '')
+    let res = await axios.get(`${PYTHON_SERVER}progress`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).catch((err) => {
+      logError(err, 'progress.js: fetchProgressFromServer()')
+    })
+    if (res && res.data && res.data.progress) {
+      let progress = res.data.progress
       return progress
     } else {
       return false
@@ -140,7 +166,7 @@ export const actions = {
           // If timeFromServer is undefined, or if time is greater than timeFromServer, push to server
           if (!timeFromServer || time > timeFromServer) {
             commit('SET_TIME', { l2, time })
-            dispatch('push')
+            dispatch('pushL2', { l2, progress: state.progress[l2.code] })
           } else {
             commit('SET_TIME', { l2, time: timeFromServer })
           }
@@ -150,23 +176,28 @@ export const actions = {
       }
     } else {
       commit('SET_TIME', { l2, time })
-      dispatch('push')
+      dispatch('pushL2', { l2, progress: state.progress[l2.code] })
     }
   },
-  async push({ rootState }) {
+  async pushL2({ state }, { l2, progress }) {
     if (!$nuxt.$auth.loggedIn) return
-    let user = rootState.auth.user
     let token = $nuxt.$auth.strategy.token.get()
-    let dataId = this.$auth.$storage.getUniversal('dataId');
-    if (user && user.id && dataId && token) {
-      let payload = { progress: localStorage.getItem('zthProgress') }
-      let path = `items/user_data/${dataId}?fields=id`
-      await this.$directus.patch(path, payload)
-        .catch(async (err) => {
-          logError(err, 'progress.js: push()')
-        })
-      // console.log('Progress: Pushed to server.')
-    }
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    const entry = progress || state.progress[l2.code]
+    if (!entry) return
+    await axios.put(`${PYTHON_SERVER}progress`, {
+      l2: l2.code,
+      progress: {
+        level: entry.level,
+        time: entry.time,
+        weeklyHours: entry.weeklyHours
+      }
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).catch((err) => {
+      logError(err, 'progress.js: pushL2()')
+    })
   }
 }
 export const getters = {
@@ -184,4 +215,3 @@ export const getters = {
     return weeklyHours
   }
 }
-

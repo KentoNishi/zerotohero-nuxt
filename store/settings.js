@@ -1,4 +1,5 @@
-import { logError } from "../lib/utils";
+import { logError, PYTHON_SERVER } from "../lib/utils";
+import axios from "axios";
 import Vue from "vue";
 import SketchEngine from "@/lib/sketch-engine";
 
@@ -273,13 +274,30 @@ export const actions = {
   async importFromJSON({ commit }, json) {
     commit("SAVE_JSON_FROM_SERVER_TO_LOCAL", json);
   },
+  async fetchFromFlask({ commit }) {
+    if (!$nuxt.$auth.loggedIn) return;
+    let token = $nuxt.$auth.strategy.token.get();
+    if (!token) return;
+    token = token.replace(/^Bearer\s+/i, "");
+    try {
+      const res = await axios.get(`${PYTHON_SERVER}user-settings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data && res.data.settings_classic) {
+        commit(
+          "SAVE_JSON_FROM_SERVER_TO_LOCAL",
+          JSON.stringify(res.data.settings_classic)
+        );
+      }
+    } catch (err) {
+      logError(err, "settings.js: fetchFromFlask()");
+    }
+  },
   // Settings are fetched from $directus.fetchOrCreateUserData from default.vue
   async syncSettingsToServer({ state }) {
     if (!$nuxt.$auth.loggedIn) return;
-    let user = this.$auth.user;
     let token = $nuxt.$auth.strategy.token.get();
-    let dataId = this.$auth.$storage.getUniversal("dataId");
-    if (user && user.id && dataId && token) {
+    if (token) {
       let settings = state
       // For some reason sometimes settings is 'undefined', never push that to the server
       if (settings) {
@@ -289,14 +307,18 @@ export const actions = {
             settingsToSave[property] = settings[property];
           }
         }
-        const payload = { settings: JSON.stringify(settingsToSave) };
-        let path = `items/user_data/${dataId}?fields=id`;
+        token = token.replace(/^Bearer\s+/i, "");
         console.log("⚙️ Saving settings to the server...");
-        await this.$directus.patch(path, payload).catch(async (err) => {
-          logError(err, "settings.js: push()");
-        });
-        this.$toast.success("Settings saved.",
-        {
+        await axios
+          .put(
+            `${PYTHON_SERVER}user-settings`,
+            { settings_classic: settingsToSave },
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+          .catch(async (err) => {
+            logError(err, "settings.js: syncSettingsToServer()");
+          });
+        this.$toast.success("Settings saved.", {
           position: "top-center",
           duration: 1000,
         });
