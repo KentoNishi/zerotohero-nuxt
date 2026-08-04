@@ -114,13 +114,13 @@ export const actions = {
   async importFromJSON({ commit }, json) {
     commit('IMPORT_FROM_JSON', json)
   },
-  setLevel({ dispatch, commit }, { l2, level }) {
+  setLevel({ dispatch, commit, state }, { l2, level }) {
     commit('SET_LEVEL', { l2, level })
     dispatch('pushL2', { l2, progress: state.progress[l2.code] })
     // Dispatch shows/loadRecommendedVideos action after setting the level
     dispatch('shows/loadRecommendedVideos', { userId: this.$auth.$storage.getUniversal('userId'), l2, level, clear: true }, { root: true })
   },
-  setWeeklyHours({ dispatch, commit }, { l2, weeklyHours }) {
+  setWeeklyHours({ dispatch, commit, state }, { l2, weeklyHours }) {
     commit('SET_WEEKLY_HOURS', { l2, weeklyHours })
     dispatch('pushL2', { l2, progress: state.progress[l2.code] })
   },
@@ -156,7 +156,7 @@ export const actions = {
    * @param {object} context 
    * @param {object} options { l2: language object, time: time in milliseconds, autoLog: whether this action is dispatched from the auto time logger }
    */
-  async setTime({ dispatch, commit }, { l2, time, autoLog }) {
+  async setTime({ dispatch, commit, state }, { l2, time, autoLog }) {
     if (autoLog) {
       // Every minute
       if (time % 60000 === 0) {
