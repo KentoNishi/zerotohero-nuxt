@@ -327,7 +327,10 @@ export default ({ app }, inject) => {
       if (server === 'python') {
         const l2_code = l2Obj.code;
         params.l2 = l2_code;
-        url = PYTHON_SERVER + "subs-search";
+        // SPEC-039 5.5 — Classic uses the temporary MySQL-backed endpoint
+        // while the Postgres pg_trgm index is being built. Flip back to
+        // "subs-search" once the index exists.
+        url = PYTHON_SERVER + "subs-search-classic";
       }
       else if (server === 'php') {
         const l2Id = l2Obj.id;
