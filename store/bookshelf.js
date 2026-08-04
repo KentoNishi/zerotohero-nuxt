@@ -1,4 +1,5 @@
-import { logError, uniqueByValue } from '../lib/utils'
+import { logError, uniqueByValue, PYTHON_SERVER } from '../lib/utils'
+import axios from 'axios'
 
 export const state = () => {
   return {
@@ -96,14 +97,39 @@ export const actions = {
   async importFromJSON({ commit }, json) {
     commit('IMPORT_FROM_JSON', json)
   },
-  async push({ rootState }) {
-    let user = rootState.auth.user
+  async fetchFromFlask({ commit }) {
+    if (!$nuxt.$auth.loggedIn) return
     let token = $nuxt.$auth.strategy.token.get()
-    let dataId = this.$auth.$storage.getUniversal('dataId');
-    if (user && user.id && dataId && token) {
-      let payload = { bookshelf: localStorage.getItem('zthBookshelf') }
-      let path = `items/user_data/${dataId}?fields=id`
-      await this.$directus.patch(path, payload)
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    try {
+      const res = await axios.get(`${PYTHON_SERVER}bookshelf`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.data && res.data.books) {
+        commit('IMPORT_FROM_JSON', JSON.stringify(res.data.books))
+      }
+    } catch (err) {
+      logError(err, 'bookshelf.js: fetchFromFlask()')
+    }
+  },
+  async push() {
+    if (!$nuxt.$auth.loggedIn) return
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    let books = []
+    try {
+      books = JSON.parse(localStorage.getItem('zthBookshelf') || '[]')
+    } catch (err) {
+      logError(err, 'bookshelf.js: push()')
+    }
+    try {
+      await axios.put(`${PYTHON_SERVER}bookshelf`, { books }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    } catch (err) {
+      logError(err, 'bookshelf.js: push()')
     }
   }
 }
@@ -125,4 +151,3 @@ export const getters = {
     }
   }
 }
-

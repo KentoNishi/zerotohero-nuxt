@@ -487,7 +487,7 @@ export default ({ app }, inject) => {
     async fetchUserData(token) {
       const user = app.$auth.user;
       const userDataRes = await this.get(
-        `items/user_data?fields=id,owner,saved_hits,saved_collocations,bookshelf&filter[owner][eq]=${
+        `items/user_data?fields=id,owner,saved_hits,saved_collocations&filter[owner][eq]=${
           user.id
         }&limit=1&timestamp=${Date.now()}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -506,10 +506,7 @@ export default ({ app }, inject) => {
       app.$auth.$storage.setUniversal("dataId", dataId);
     },
 
-    storeUserData({
-      id,
-      history,
-    }) {
+    storeUserData({ id }) {
       app.$auth.$storage.setUniversal("dataId", id);
       // Saved words now come from Flask's row API (SPEC-034); the Directus
       // saved_words blob is no longer read here.
@@ -520,7 +517,8 @@ export default ({ app }, inject) => {
       app.store.dispatch("savedPhrases/fetchFromFlask");
       app.store.dispatch("progress/fetchFromFlask");
       app.store.dispatch("settings/fetchFromFlask");
-      // app.store.dispatch("history/importFromJSON", history);
+      app.store.dispatch("history/fetchFromFlask");
+      app.store.dispatch("bookshelf/fetchFromFlask");
     },
 
     async checkSubscription() {

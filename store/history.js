@@ -1,4 +1,6 @@
 import { logError, uniqueByValue } from '../lib/helper'
+import axios from 'axios'
+import { PYTHON_SERVER } from '../lib/utils'
 
 export const state = () => {
   return {
@@ -83,15 +85,39 @@ export const actions = {
   async importFromJSON({ commit }, json) {
     commit('IMPORT_HISTORY_FROM_JSON', json)
   },
-  async push({ rootState }) {
+  async fetchFromFlask({ commit }) {
     if (!$nuxt.$auth.loggedIn) return
-    let user = rootState.auth.user
     let token = $nuxt.$auth.strategy.token.get()
-    let dataId = this.$auth.$storage.getUniversal('dataId');
-    if (user && user.id && dataId && token) {
-      let payload = { history: localStorage.getItem('zthHistory') }
-      let path = `items/user_data/${dataId}?fields=id`
-      await this.$directus.patch(path, payload)
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    try {
+      const res = await axios.get(`${PYTHON_SERVER}history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.data && res.data.history) {
+        commit('IMPORT_HISTORY_FROM_JSON', JSON.stringify(res.data.history))
+      }
+    } catch (err) {
+      logError(err, 'history.js: fetchFromFlask()')
+    }
+  },
+  async push() {
+    if (!$nuxt.$auth.loggedIn) return
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    let history = []
+    try {
+      history = JSON.parse(localStorage.getItem('zthHistory') || '[]')
+    } catch (err) {
+      logError(err, 'history.js: push()')
+    }
+    try {
+      await axios.put(`${PYTHON_SERVER}history`, { history }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    } catch (err) {
+      logError(err, 'history.js: push()')
     }
   }
 }
@@ -113,4 +139,3 @@ export const getters = {
     }
   }
 }
-
