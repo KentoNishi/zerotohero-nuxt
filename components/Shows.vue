@@ -182,6 +182,7 @@
 </template>
 
 <script>
+import axios from "axios";
 import { tify } from "chinese-conv";
 import {
   scrollToTargetAdjusted,
@@ -189,6 +190,7 @@ import {
   unique,
   languageLevels,
   LANGS_WITH_LEVELS,
+  PYTHON_SERVER,
 } from "../lib/utils";
 import { CATEGORIES } from "../lib/youtube";
 import { mapState } from "vuex";
@@ -475,13 +477,17 @@ export default {
     },
     async getShowsOverNetwork() {
       let langId = this.$l2.id;
-      let type = this.routeType.replace("-", "_");
-      let path = `items/${type}?filter[l2][eq]=${langId}&fields=id,title`;
-      let response = await this.$directus.get(path);
-      if (response.data && response.data.data.length > 1) {
-        let shows = response.data.data;
+      const l2Code = this.$directus.langCodeById(langId);
+      // SPEC-039 5.5 — shows/talks served by Flask.
+      const endpoint = this.routeType === "tv-shows" ? "tv-shows" : "talks";
+      let response = await axios.get(
+        `${PYTHON_SERVER}${endpoint}?l2=${encodeURIComponent(l2Code)}&limit=1000`
+      );
+      if (Array.isArray(response?.data) && response.data.length > 1) {
+        let shows = response.data;
         return shows;
       }
+      return [];
     },
     sortShows(shows) {
       switch (this.sort) {

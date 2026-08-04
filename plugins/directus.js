@@ -82,6 +82,13 @@ export default ({ app }, inject) => {
         ":" +
         window.location.port,
 
+    langCodeById(langId) {
+      let lang = app.$languages && app.$languages.getById
+        ? app.$languages.getById(langId)
+        : null;
+      return lang ? lang.code : null;
+    },
+
     tokenOptions(options = {}) {
       let token = app.$auth.strategy.token.get();
       if (token) {
@@ -159,36 +166,33 @@ export default ({ app }, inject) => {
      * Count the number of episodes in a show
      * @param {string} showType 'tv_show' or 'talk'
      * @param {number} showId
-     * @param {number} l2Id
+     * @param {string} l2Code
      * @returns
      */
-    async countShowEpisodes(showType, showId, l2Id, adminMode = false) {
-      let tableSuffix = this.youtubeVideosTableName(l2Id).replace(
-        `items/youtube_videos`,
-        ""
-      );
-      let data = await proxy(
-        `${LP_DIRECTUS_TOOLS_URL}count.php?table_suffix=${tableSuffix}&lang_id=${l2Id}&type=${showType}&id=${showId}`,
-        { cacheLife: adminMode ? 0 : 86400 } // cache the count for one day (86400 seconds)
-      );
-      if (data) return data;
+    async countShowEpisodes(showType, showId, l2Code, adminMode = false) {
+      if (!l2Code) return 0;
+      try {
+        // SPEC-039 5.5 — count.php replaced by Flask /videos/count.
+        let res = await axios.get(
+          `${PYTHON_SERVER}videos/count?l2=${encodeURIComponent(l2Code)}&type=${showType}&id=${showId}`
+        );
+        let data = Number(res?.data);
+        return data || 0;
+      } catch (err) {
+        logError(err, "directus.js: countShowEpisodes()");
+        return 0;
+      }
     },
 
-    async getRandomEpisodeYouTubeId(langId, type) {
-      let showFilter = type ? `&filter[${type}][nnull]=1` : "";
-      let randBase64Char = randBase64(1);
-      let url = `${this.youtubeVideosTableName(
-        langId
-      )}?filter[l2][eq]=${langId}${showFilter}&filter[youtube_id][contains]=${randBase64Char}&fields=youtube_id`;
+    async getRandomEpisodeYouTubeId(langCode, type) {
+      if (!langCode) return false;
       try {
-        let response = await this.get(url);
-        if (response.data && response.data.data.length > 0) {
-          response = response.data;
-          let randomVideo =
-            response.data[Math.floor(Math.random() * response.data.length)];
-          return randomVideo.youtube_id;
-        }
+        let response = await axios.get(
+          `${PYTHON_SERVER}videos/random?l2=${encodeURIComponent(langCode)}${type ? `&type=${type}` : ""}`
+        );
+        return response?.data?.youtube_id || false;
       } catch (err) {
+        logError(err, "directus.js: getRandomEpisodeYouTubeId()");
         return false;
       }
     },
@@ -222,34 +226,77 @@ export default ({ app }, inject) => {
       return video;
     },
 
-    async getVideo({ id, l2Id }) {
-      const suffix = this.youtubeVideosTableSuffix(l2Id);
-      const url = LP_DIRECTUS_TOOLS_URL + `video/${suffix ? suffix : 0}/${id}`;
-      let res = await axios.get(url).catch((err) => logError(err));
+    async getVideo({ id, l2Code }) {
+      if (!l2Code) return null;
+      // SPEC-039 5.5 — PHP video/{suffix}/{id} replaced by Flask /videos/id/<id>.
+      const url = `${PYTHON_SERVER}videos/id/${id}?l2=${encodeURIComponent(l2Code)}&subs_l2=1`;
+      let res = await axios.get(url).catch((err) => logError(err, "directus.js: getVideo()"));
       if (res?.data) {
         let video = res.data;
         video = this.normalizeDifficulty(video);
         return video;
       }
+      return null;
     },
 
     async getVideos({ l2Id, query = "", params = {}, subs = false, tags = false } = {}) {
+      const l2Code = this.langCodeById(l2Id);
+      if (!l2Code) return [];
       // You can use either a query string or params object
       if (query) {
         params = parseQueryString(query);
       }
-      let fields = 'id,l2,title,youtube_id,tv_show,talk,date,lex_div,word_freq,difficulty,views,category,locale,duration,made_for_kids,views,likes,comments,type';
-      if (subs) fields += ',subs_l2';
-      if (tags) fields += ',tags';
-      params.fields = params.fields || fields;
-      // No language filter is necessary since the table only has one language
-      if (!this.youtubeVideosTableHasOnlyOneLanguage(l2Id)) {
-        params['filter[l2][eq]'] = l2Id;
+      // Some call sites historically included a trailing "=" in filter keys.
+      let normalized = {};
+      for (let key in params) {
+        normalized[key.replace(/=$/, "")] = params[key];
       }
-      let res = await this.get(`${this.youtubeVideosTableName(l2Id)}`, params);
-      if (res?.data?.data) {
-        let videos = res.data.data;
-        videos = videos.map((video) => this.normalizeDifficulty(video));
+      params = normalized;
+      // SPEC-039 5.5 — Directus filter params are translated to the Flask
+      // /search-videos contract; ids returned by Flask are consolidated.
+      let p = {
+        l2: l2Code,
+        subs: subs ? "1" : undefined,
+        offset: params.offset || 0,
+        limit: params.limit || 50,
+      };
+      const filter = (key) => params[`filter[${key}]`];
+      const eq = (key) => filter(`${key}[eq]`);
+      const isNull = (key) => filter(`${key}[null]`) === 1 || filter(`${key}[null]`) === "1";
+
+      if (eq("youtube_id")) p.youtubeIds = eq("youtube_id");
+      if (filter("youtube_id[in]")) p.youtubeIds = filter("youtube_id[in]");
+      if (eq("tv_show")) p.tvShow = eq("tv_show");
+      if (eq("talk")) p.talk = eq("talk");
+      if (isNull("tv_show") || isNull("talk")) p.noShow = "1";
+      if (filter("title[contains]")) p.q = filter("title[contains]");
+      if (filter("title[eq]")) p.q = filter("title[eq]");
+      if (filter("title[gt]")) p.titleGt = filter("title[gt]");
+      if (filter("date[lt]")) p.dateLt = filter("date[lt]");
+      if (filter("views[lt]")) p.viewsLt = filter("views[lt]");
+      if (filter("difficulty[gt]")) p.difficultyGt = filter("difficulty[gt]");
+      if (filter("difficulty[between]")) p.difficultyBetween = filter("difficulty[between]");
+      if (eq("channel_id")) p.channelId = eq("channel_id");
+      if (filter("channel_id[in]")) p.channelIds = filter("channel_id[in]");
+      if (eq("category")) p.category = eq("category");
+      if (filter("category[nin]")) p.excludeCategories = filter("category[nin]");
+      if (eq("locale")) p.locale = eq("locale");
+      if (filter("locale[contains]")) p.localeContains = filter("locale[contains]");
+      if (eq("made_for_kids")) p.madeForKids = eq("made_for_kids");
+      if (filter("type[neq]")) p.typeNeq = filter("type[neq]");
+      if (filter("lesson[eq]")) p.lesson = filter("lesson[eq]");
+      if (eq("level")) p.level = eq("level");
+      if (params.sort) p.sort = params.sort;
+      if (params.meta === "filter_count") p.withCount = "1";
+
+      Object.keys(p).forEach((key) => p[key] === undefined && delete p[key]);
+      let res = await axios
+        .get(`${PYTHON_SERVER}search-videos`, { params: p })
+        .catch((err) => logError(err, "directus.js: getVideos()"));
+      if (res?.data) {
+        let videos = res.data;
+        if (videos && videos.meta) videos = videos.data;
+        videos = (videos || []).map((video) => this.normalizeDifficulty(video));
         return videos;
       } else return [];
     },
@@ -378,12 +425,19 @@ export default ({ app }, inject) => {
     },
 
     async checkShows(videos, langId, adminMode = false) {
-      let response = await this.get(
-        `items/tv_shows?filter[l2][eq]=${langId}&limit=500&timestamp=${
-          adminMode ? Date.now() : 0
-        }`
-      );
-      let shows = response.data?.data || [];
+      const l2Code = this.langCodeById(langId);
+      if (!l2Code) return videos;
+      let shows = [];
+      try {
+        // SPEC-039 5.5 — tv_shows/talks served by Flask.
+        const [tvRes, talkRes] = await Promise.all([
+          axios.get(`${PYTHON_SERVER}tv-shows?l2=${encodeURIComponent(l2Code)}&limit=500`),
+          axios.get(`${PYTHON_SERVER}talks?l2=${encodeURIComponent(l2Code)}&limit=500`),
+        ]);
+        shows = [...(tvRes?.data || []), ...(talkRes?.data || [])];
+      } catch (err) {
+        logError(err, "directus.js: checkShows()");
+      }
       let showTitles = shows.map((show) => show.title);
       let regex = new RegExp(showTitles.map((t) => escapeRegExp(t)).join("|"));
       for (let video of videos) {

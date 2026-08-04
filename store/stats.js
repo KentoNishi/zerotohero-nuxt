@@ -1,4 +1,5 @@
-import { proxy, logError, DIRECTUS_URL } from '../lib/utils'
+import axios from 'axios'
+import { logError, PYTHON_SERVER } from '../lib/utils'
 
 export const state = () => {
   return {
@@ -14,26 +15,22 @@ export const mutations = {
   },
 }
 
-const LP_DIRECTUS8_TOOLS_URL = `${DIRECTUS_URL}lp-directus8-tools/`
-
 export const actions = {
   async load({ state, rootGetters, commit }, { l2, adminMode }) {
     if (state.statsLoaded[l2.code]) return
     try {
       let stats = {}
-      let tableSuffix = this.$directus.youtubeVideosTableName(l2.id).replace(`items/youtube_videos`, '')
-      let data = await proxy(
-        `${LP_DIRECTUS8_TOOLS_URL}count.php?table_suffix=${tableSuffix}&lang_id=${l2.id}&type=new_videos`,
-        { cacheLife: adminMode ? 0 : 86400 } // cache the count for one day (86400 seconds)
+      // SPEC-039 5.5 — count.php replaced by Flask /videos/count.
+      let data = await axios.get(
+        `${PYTHON_SERVER}videos/count?l2=${encodeURIComponent(l2.code)}&type=new_videos`
       );
-      data = Number(data) // NaN is falsy
+      data = Number(data?.data)
       if (data) stats.newVideos = data
 
-      data = await proxy(
-        `${LP_DIRECTUS8_TOOLS_URL}count.php?table_suffix=${tableSuffix}&lang_id=${l2.id}`,
-        { cacheLife: adminMode ? 0 : 86400 } // cache the count for one day (86400 seconds)
+      data = await axios.get(
+        `${PYTHON_SERVER}videos/count?l2=${encodeURIComponent(l2.code)}`
       );
-      data = Number(data) // NaN is falsy
+      data = Number(data?.data)
       if (data) stats.allVideos = data
 
       commit('LOAD', { l2, stats })

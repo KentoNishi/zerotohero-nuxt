@@ -44,12 +44,16 @@ export const determineSortType = ({ type = "talk", show }) => {
 
 export const fetchShows = async ($directus, type, l2, forceRefresh, limit) => {
   try {
-    const response = await $directus.get(
-      `items/${type}?filter[l2][eq]=${l2.id}${forceRefresh ? "" : "&filter[hidden][empty]=true"}&limit=${limit}&timestamp=${forceRefresh ? Date.now() : 0}`
+    // SPEC-039 5.5 — tv_shows/talks served by Flask from Supabase.
+    const endpoint = type === "tv_shows" ? "tv-shows" : "talks";
+    const response = await axios.get(
+      `${PYTHON_SERVER}${endpoint}?l2=${encodeURIComponent(l2.code)}&limit=${limit}${
+        forceRefresh ? "&includeHidden=1" : ""
+      }`
     );
-    
-    if (response.data.data) {
-      const shows = response.data.data;
+
+    if (Array.isArray(response.data)) {
+      const shows = response.data;
       shows.forEach((show) => (show.tags = unique((show.tags || "").split(","))));
       shows.sort((x, y) => x.title?.localeCompare(y.title, l2.locales[0]) || 0);
       return shows;

@@ -56,15 +56,17 @@ export const actions = {
     if (state.watchHistoryLoadedForL2Id !== l2Id && !state.watchHistoryLoading) {
       if (!$nuxt.$auth.loggedIn) return
       state.watchHistoryLoading = true
-      let user = rootState.auth.user
       let token = $nuxt.$auth.strategy.token.get()
-      if (user && user.id && token) {
-        let response = await axios.post(`${PYTHON_SERVER}user-watch-history`, { id: user.id, token, l2: l2.code })
+      if (token) {
+        token = token.replace(/^Bearer\s+/i, '')
+        let response = await axios.get(`${PYTHON_SERVER}watch-history?l2=${encodeURIComponent(l2.code)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
         if (response?.status !== 200) {
           logError('Error loading watch history from the server', response)
           return
         } else {
-          const watchHistoryItems = response.data
+          const watchHistoryItems = response.data?.history || []
           watchHistoryItems.forEach(item => {
             item.date = new Date(item.date) // Date returned from the server is a Human-readable string
           })
@@ -124,9 +126,8 @@ export const actions = {
     if (!token) return
     token = token.replace(/^Bearer\s+/i, '')
     try {
-      await axios.delete(`${PYTHON_SERVER}watch-history/delete`, {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { entryId: historyItem.id }
+      await axios.delete(`${PYTHON_SERVER}watch-history/${historyItem.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
       })
     } catch (err) {
       logError(err, 'watchHistory.js: remove()')

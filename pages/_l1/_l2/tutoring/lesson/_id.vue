@@ -154,10 +154,14 @@ export default {
       `items/reading?filter[l2][eq]=${this.$l2.id}&filter[lesson][eq]=${this.id}`
     );
     readings = readings.data.data;
-    let youtubeVideos = await this.$directus.get(
-      `${this.$directus.youtubeVideosTableName(this.$l2.id)}?filter[l2][eq]=${this.$l2.id}&filter[lesson][eq]=${this.id}`
-    );
-    youtubeVideos = youtubeVideos.data.data.map((video) => {
+    // SPEC-039 5.5 — videos served by Flask /search-videos.
+    let youtubeVideos = await this.$directus.getVideos({
+      l2Id: this.$l2.id,
+      params: {
+        "filter[lesson][eq]": this.id,
+      },
+    });
+    youtubeVideos = (youtubeVideos || []).map((video) => {
       return {
         youtube_id: video.youtube_id,
         title: video.title,

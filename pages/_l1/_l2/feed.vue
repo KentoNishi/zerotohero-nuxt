@@ -321,16 +321,11 @@ export default {
         let filter = "";
         if (tvShow) filter = `filter[tv_show][eq]=${tvShow}`;
         if (talk) filter = `filter[talk][eq]=${talk}`;
-        // First find videos associated with a particular tv show, or talk
-        let response = await this.$directus.get(
-          `${this.$directus.youtubeVideosTableName(
-            this.$l2.id
-          )}?sort=${sort}&filter[l2][eq]=${
-            this.$l2.id
-          }&${filter}&limit=${limit}&fields=l2,id,title,youtube_id,tv_show.id,tv_show.title,talk.id,talk.title,talk.audiobook,date,l2&offset=${offset}`
-        );
-        if (response.data.data && response.data.data.length > 0) {
-          videos = uniqueByValue(response.data.data, "youtube_id");
+        // SPEC-039 5.5 — videos served by Flask /search-videos.
+        let query = `sort=${sort}&limit=${limit}&offset=${offset}${filter ? "&" + filter : ""}`;
+        let response = await this.$directus.getVideos({ l2Id: this.$l2.id, query });
+        if (response && response.length > 0) {
+          videos = uniqueByValue(response, "youtube_id");
         }
 
         return videos;

@@ -186,7 +186,10 @@ import {
   shuffle,
   uniqueByValue,
   LANGS_WITH_CONTENT,
+  logError,
+  PYTHON_SERVER,
 } from "../../../../../lib/utils";
+import axios from "axios";
 import { tify, sify } from "chinese-conv";
 
 export default {
@@ -398,10 +401,19 @@ export default {
       }
     },
     async getShowFromServer(id, collection) {
-      let response = await this.$directus.get(`items/${collection}s/${id}`);
-      if (response && response.data) {
-        return response.data.data;
+      try {
+        // SPEC-039 5.5 — shows/talks served by Flask.
+        const endpoint = collection === "tv_show" ? "tv-shows" : "talks";
+        let response = await axios.get(
+          `${PYTHON_SERVER}${endpoint}/${id}`
+        );
+        if (response?.data) {
+          return response.data;
+        }
+      } catch (err) {
+        logError(err, "show/_id.vue: getShowFromServer()");
       }
+      return null;
     },
     async getEpisodes({
       keyword,
@@ -426,7 +438,7 @@ export default {
           episodeCount = await this.$directus.countShowEpisodes(
             this.collection,
             this.show.id,
-            this.$l2.id,
+            this.$l2.code,
             this.$adminMode
           );
         } catch (err) {

@@ -1,3 +1,6 @@
+import axios from 'axios'
+import { logError, PYTHON_SERVER } from '../lib/utils'
+
 const LOCAL_KEY = 'zthSavedText'
 
 
@@ -57,12 +60,17 @@ export const getters = {
 export const loadFromServer = async ({ l2, adminMode }) => {
   let items = []
   if ($nuxt.$auth.loggedIn) {
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return []
+    token = token.replace(/^Bearer\s+/i, '')
     try {
-      let path = `items/text?sort=title&filter[l2][eq]=${l2.id
-        }&filter[owner][eq]=${$nuxt.$auth.user.id}&fields=id,title,text,translation,owner&timestamp=${Date.now()}`
-      let res = await $nuxt.$directus.get(path);
-      items = res?.data?.data || []
+      // SPEC-039 5.4 — notes now live in Supabase (Flask /user-notes).
+      let res = await axios.get(`${PYTHON_SERVER}user-notes?l2=${encodeURIComponent(l2.code)}&timestamp=${Date.now()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      items = res?.data || []
     } catch (e) {
+      logError(e, 'savedText.js: loadFromServer()')
     }
   }
   return items
@@ -86,50 +94,83 @@ export const actions = {
     commit('LOAD', { l2, itemsByL2 })
   },
   async loadItem({ commit }, { l2, id, adminMode }) {
-    let path = `items/text/${id}?timestamp=${Date.now()}`;
-    let res = await $nuxt.$directus.get(path);
-    if (res.data && res.data.data) {
-      let data = res.data.data;
+    if (!$nuxt.$auth.loggedIn) return null
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return null
+    token = token.replace(/^Bearer\s+/i, '')
+    let res
+    try {
+      res = await axios.get(`${PYTHON_SERVER}user-notes/${id}?timestamp=${Date.now()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    } catch (e) {
+      logError(e, 'savedText.js: loadItem()')
+      return null
+    }
+    if (res.data) {
+      let data = res.data;
       commit('LOAD_ITEM', { l2, id, data })
     }
-    return res.data.data
+    return res.data
   },
   async add({ commit }, { l2, item }) {
-    item = item || { text: '', translation: '', title: 'Untitled', l2: l2.id }
+    item = item || { text: '', translation: '', title: 'Untitled', l2: l2.code }
     if ($nuxt.$auth.loggedIn) {
-      let response = await $nuxt.$directus.post(
-        `items/text`,
-        item
-      );
-      if (response?.data) {
-        item = response.data.data
+      let token = $nuxt.$auth.strategy.token.get()
+      if (token) {
+        token = token.replace(/^Bearer\s+/i, '')
+        try {
+          let response = await axios.post(`${PYTHON_SERVER}user-notes`, item, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (response?.data?.id) {
+            item = response.data
+          }
+        } catch (e) {
+          logError(e, 'savedText.js: add()')
+        }
       }
     }
     commit('ADD', { l2, item })
-    // commit('SAVE_LOCAL')
     return item
   },
   async remove({ commit }, { l2, itemId }) {
     if ($nuxt.$auth.loggedIn) {
-      let response = await $nuxt.$directus.delete(
-        `items/text/${itemId}`
-      );
-      if (response?.data) {
-        return response.data
+      let token = $nuxt.$auth.strategy.token.get()
+      if (token) {
+        token = token.replace(/^Bearer\s+/i, '')
+        try {
+          let response = await axios.delete(`${PYTHON_SERVER}user-notes/${itemId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (response?.data) {
+            return response.data
+          }
+        } catch (e) {
+          logError(e, 'savedText.js: remove()')
+        }
       }
     }
     commit('REMOVE', { l2, itemId })
-    // commit('SAVE_LOCAL')
   },
   async update({ commit }, { l2, payload }) {
     if ($nuxt.$auth.loggedIn) {
-      await $nuxt.$directus.patch(
-        `items/text/${payload.id}`,
-        payload
-      );
+      let token = $nuxt.$auth.strategy.token.get()
+      if (token) {
+        token = token.replace(/^Bearer\s+/i, '')
+        try {
+          let response = await axios.patch(`${PYTHON_SERVER}user-notes/${payload.id}`, payload, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (response?.data?.id) {
+            payload = response.data
+          }
+        } catch (e) {
+          logError(e, 'savedText.js: update()')
+        }
+      }
     }
     commit('UPDATE', { l2, payload })
   }
 }
-
 

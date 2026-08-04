@@ -21,18 +21,20 @@ export const actions = {
   async fetchUserLikes({ commit, rootState }, l2) {
     if (!$nuxt.$auth.loggedIn) return;
 
-    let user = rootState.auth.user;
     let token = $nuxt.$auth.strategy.token.get();
 
-    if (user && user.id && token) {
+    if (token) {
+      token = token.replace(/^Bearer\s+/i, '')
       try {
-        let response = await axios.post(`${PYTHON_SERVER}user-likes`, { id: user.id, l2: l2.code });
+        let response = await axios.get(`${PYTHON_SERVER}likes?l2=${encodeURIComponent(l2.code)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         // Handle success (e.g., update UI or state)
         if (response?.status !== 200) {
           logError('Error loading likes from the server', response);
           return;
         } else {
-          let userLikes = response.data;
+          let userLikes = response.data?.likes || [];
           userLikes.forEach(item => {
             item.created_on = new Date(item.created_on) // Date returned from the server is a Human-readable string
           })

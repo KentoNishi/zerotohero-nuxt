@@ -194,12 +194,15 @@ export default {
   },
   async created() {
     this.lessonVideos = [];
-    let response = await this.$directus.get(
-      `${this.$directus.youtubeVideosTableName(this.$l2.id)}?filter[l2][eq]=${
-        this.$l2.id
-      }&filter[level][eq]=${this.level}&filter[lesson][eq]=${this.lesson}`
-    );
-    let videos = response.data.data || [];
+    // SPEC-039 5.5 — videos served by Flask /search-videos.
+    let videos = await this.$directus.getVideos({
+      l2Id: this.$l2.id,
+      subs: true,
+      params: {
+        "filter[level][eq]": this.level,
+        "filter[lesson][eq]": this.lesson,
+      },
+    });
     if (videos.length > 0) {
       videos = videos.map((video) => {
         video.subs_l2 = this.$subs.parseSavedSubs(video.subs_l2);

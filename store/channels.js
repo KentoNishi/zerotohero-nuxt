@@ -1,3 +1,6 @@
+import axios from 'axios'
+import { logError, PYTHON_SERVER } from '../lib/utils'
+
 export const state = () => {
   return {
     channels: [],
@@ -25,13 +28,11 @@ export const actions = {
       return; // Don't fetch if already fetched
     }
     try {
-      const channels = await this.$directus.getData(`items/youtube_channels`, {
-        "fields": "id,channel_id,thumbnail,title,subscribers,video_count,l2",
-        "filter[l2][eq]": l2_id,
-        "sort": "-video_count",
-        "timestamp": Date.now(),
-        limit: -1,
-      });
+      // SPEC-039 5.5 — youtube_channels served by Flask /channels.
+      const l2Code = this.$directus.langCodeById(l2_id);
+      if (!l2Code) return;
+      const res = await axios.get(`${PYTHON_SERVER}channels?l2=${encodeURIComponent(l2Code)}`);
+      const channels = res?.data || [];
       if (channels?.length > 0) {
         commit("SET_CHANNELS", { channels, l2_id });
       }

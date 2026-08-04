@@ -23,7 +23,8 @@
 </template>
 
 <script>
-import { randomInt, unique} from "../lib/utils";
+import axios from "axios";
+import { randomInt, unique, PYTHON_SERVER } from "../lib/utils";
 
 export default {
   props: {
@@ -51,13 +52,20 @@ export default {
   },
   methods: {
     async getLastShowId() {
-      let key = this.type.replace("-", "_");
-      let res = await this.$directus.get(
-        `items/${key}?sort=-id&limit=1`
-      );
-      if (res && res.data && res.data.data && res.data.data[0]) {
-        return res.data.data[0].id;
+      try {
+        // SPEC-039 5.5 — tv_shows/talks served by Flask.
+        const endpoint = this.type === "tv-shows" ? "tv-shows" : "talks";
+        let res = await axios.get(
+          `${PYTHON_SERVER}${endpoint}?limit=${this.limit}`
+        );
+        const shows = Array.isArray(res?.data) ? res.data : [];
+        if (shows.length > 0) {
+          return Math.max(...shows.map((s) => Number(s.id) || 0));
+        }
+      } catch (err) {
+        console.error("Error fetching max show id", err);
       }
+      return undefined;
     },
     generateRandomIds(max, count = 500) {
       let randIds = [];
@@ -67,17 +75,16 @@ export default {
       return unique(randIds);
     },
     async loadRandomShowsMatchingIds(ids, adminMode) {
-      let response = await this.$directus.get(
-        `items/tv_shows?filter${
-          adminMode ? "" : "&filter[hidden][empty]=true"
-        }&filter[id][in]=${ids.join(
-          ","
-        )}&timestamp=${
-          adminMode ? Date.now() : 0
-        }`
-      );
-      if (response && response.data) {
-        return response.data.data;
+      try {
+        const endpoint = this.type === "tv-shows" ? "tv-shows" : "talks";
+        let response = await axios.get(
+          `${PYTHON_SERVER}${endpoint}?limit=${this.limit}${adminMode ? "&includeHidden=1" : ""}`
+        );
+        const shows = Array.isArray(response?.data) ? response.data : [];
+        return shows.filter((show) => ids.includes(Number(show.id)));
+      } catch (err) {
+        console.error("Error loading random shows", err);
+        return [];
       }
     },
   },
