@@ -50,33 +50,17 @@ export const actions = {
     const token = $nuxt.$auth.strategy.token.get();
 
     if (user && user.id && token) {
-      const path = 'items/user_likes';
-      const response = await this.$directus.get(path, { 
-        'filter[owner][eq]': user.id, 
-        'filter[l2][eq]': l2Id, 
-        'filter[video_id][eq]': videoId 
-      });
-
-      if (response.status !== 200) {
-        logError('Error loading likes from the server', response);
-        return;
-      }
-
-      const likes = response.data?.data || [];
-      if (likes.length === 0) {
-        const data = {
-          l2: l2Id,
-          video_id: videoId
-        };
-        const postResponse = await this.$directus.post(path, data);
-        const id = postResponse.data?.data?.id;
-        
-        if (postResponse?.status !== 200) {
-          logError('Error creating a new like', postResponse);
-          return;
-        }
-
-        commit('ADD_LIKE', { youtube_id: video.youtube_id, id: parseInt(video.id), l2: l2Id, tags: video.tags, title: video.title, created_on: new Date()});
+      try {
+        const cleanToken = token.replace(/^Bearer\s+/i, '')
+        await axios.put(`${PYTHON_SERVER}likes`, {
+          videoId,
+          l2: String(l2Id)
+        }, {
+          headers: { Authorization: `Bearer ${cleanToken}` }
+        })
+        commit('ADD_LIKE', { youtube_id: video.youtube_id, id: videoId, l2: l2Id, tags: video.tags, title: video.title, created_on: new Date()})
+      } catch (err) {
+        logError(err, 'userLikes.js: like()')
       }
     }
   },
@@ -88,29 +72,16 @@ export const actions = {
     const token = $nuxt.$auth.strategy.token.get();
 
     if (user && user.id && token) {
-      const path = 'items/user_likes';
-      const response = await this.$directus.get(path, { 
-        'filter[owner][eq]': user.id, 
-        'filter[l2][eq]': l2Id, 
-        'filter[video_id][eq]': videoId 
-      });
-
-      if (response.status !== 200) {
-        logError('Error loading likes from the server', response);
-        return;
-      }
-
-      const likes = response.data?.data || [];
-      if (likes.length > 0) {
-        const deleteResponse = await this.$directus.delete(`items/user_likes/${likes[0].id}`);
-
-        if (deleteResponse.status !== 204) {
-          logError('Error deleting a like', deleteResponse);
-          return;
-        }
-
+      try {
+        const cleanToken = token.replace(/^Bearer\s+/i, '')
+        await axios.delete(
+          `${PYTHON_SERVER}likes/${String(l2Id)}/${videoId}`,
+          { headers: { Authorization: `Bearer ${cleanToken}` } }
+        )
         commit('REMOVE_LIKE', videoId);
         console.log(`User Likes: Unliked video with ID ${videoId} and L2 ${l2Id}`);
+      } catch (err) {
+        logError(err, 'userLikes.js: unlike()')
       }
     }
   },

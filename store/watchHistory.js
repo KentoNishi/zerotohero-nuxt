@@ -84,37 +84,53 @@ export const actions = {
     }
     // First, check if this history item already exists in the user's history. If so, update it; otherwise, add it.
     let hasHistoryItem = getters.has(historyItem)
-    if (hasHistoryItem) {
-      // Update the history item in the Directus server
-      let path = `items/user_watch_history/${hasHistoryItem.id}`
-      let mergedHistoryItem = { ...hasHistoryItem, ...historyItem }
-      // Do not save the `video` property to the server
-      delete mergedHistoryItem.video
-      await this.$directus.patch(path, mergedHistoryItem)
-      commit('UPDATE_HISTORY_ITEM', historyItem)
-      console.log(`Watch History: YouTube video ${historyItem.video_id} updated with new position ${historyItem.last_position}`)
-    } else {
-      // Add the history item to the Directus server
-      let path = 'items/user_watch_history'
-      // Do not save the `video` property to the server. We clone it and delte it from the clone.
-      let payload = { ...historyItem }
-      delete payload.video
-      let response = await this.$directus.post(path, payload)
-      if (response?.status !== 200) {
-        logError('Error adding watch history item to the server', response)
-        return
-      } else {
-        historyItem.id = response.data.data.id
+    if (!$nuxt.$auth.loggedIn) return
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    try {
+      // Row API (SPEC-039 5.3): old per-shard video_id + l2 are remapped server-side.
+      const payload = {
+        videoId: parseInt(historyItem.video_id, 10),
+        l2: String(historyItem.l2),
+        lastPosition: historyItem.last_position || 0
       }
-      console.log(`Watch History: YouTube video ${historyItem.video_id} added with position ${historyItem.last_position}`)
-      commit('ADD_HISTORY_ITEM', historyItem)
-    }    
+      if (historyItem.date) {
+        payload.date = new Date(historyItem.date).toISOString()
+      }
+      const response = await axios.post(`${PYTHON_SERVER}watch-history`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.status !== 200) {
+        logError('Error saving watch history item', response)
+        return
+      }
+      historyItem.id = response.data.id
+      if (hasHistoryItem) {
+        commit('UPDATE_HISTORY_ITEM', historyItem)
+        console.log(`Watch History: YouTube video ${historyItem.video_id} updated with new position ${historyItem.last_position}`)
+      } else {
+        commit('ADD_HISTORY_ITEM', historyItem)
+        console.log(`Watch History: YouTube video ${historyItem.video_id} added with position ${historyItem.last_position}`)
+      }
+    } catch (err) {
+      logError(err, 'watchHistory.js: addOrUpdate()')
+    }
   },
   // Remove a history item from the Vuex state and sync it to the backend.
   async remove({ commit }, historyItem) {
-    // Remove the history item from the Directus server
-    let path = `items/user_watch_history/${historyItem.id}`
-    await this.$directus.delete(path)
+    if (!$nuxt.$auth.loggedIn) return
+    let token = $nuxt.$auth.strategy.token.get()
+    if (!token) return
+    token = token.replace(/^Bearer\s+/i, '')
+    try {
+      await axios.delete(`${PYTHON_SERVER}watch-history/delete`, {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { entryId: historyItem.id }
+      })
+    } catch (err) {
+      logError(err, 'watchHistory.js: remove()')
+    }
     commit('REMOVE_HISTORY_ITEM', historyItem)
   },
   // Remove all history items from the Vuex state and sync it to the backend.
@@ -148,4 +164,3 @@ export const getters = {
     }
   }
 }
-
