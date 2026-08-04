@@ -190,10 +190,11 @@ export default {
     },
     // Dynamically structures the filter keys passed into the results component
     mediaSearchParams() {
-      const filterKey = `filter[${this.searchField}][contains]`;
-      return {
-        [filterKey]: this.term
-      };
+      // SPEC-039 5.5 — Classic search calls the new /search-videos API
+      // directly (q for titles, tag for tags) instead of Directus filters.
+      return this.searchField === "tags"
+        ? { tag: this.term }
+        : { q: this.term };
     }
   },
   mounted() {

@@ -260,7 +260,9 @@ export default ({ app }, inject) => {
         offset: params.offset || 0,
         limit: params.limit || 50,
       };
-      const filter = (key) => params[`filter[${key}]`];
+      // Directus filter keys are `filter[field][op]`. `key` arrives as
+      // `field[op]`, so the canonical lookup is `filter[` + `field][op]`.
+      const filter = (key) => params["filter[" + key.replace("[", "][")];
       const eq = (key) => filter(`${key}[eq]`);
       const isNull = (key) => filter(`${key}[null]`) === 1 || filter(`${key}[null]`) === "1";
 
@@ -288,6 +290,20 @@ export default ({ app }, inject) => {
       if (eq("level")) p.level = eq("level");
       if (params.sort) p.sort = params.sort;
       if (params.meta === "filter_count") p.withCount = "1";
+
+      // New-API call sites pass canonical /search-videos params directly
+      // (q, tag, tvShow, channelId, ...). Prefer those over translated
+      // Directus filters when both are present.
+      const canonicalParams = [
+        "q", "tag", "tvShow", "talk", "noShow", "channelId", "channelIds",
+        "category", "excludeCategories", "locale", "localeContains",
+        "madeForKids", "typeNeq", "lesson", "level", "difficultyBetween",
+        "titleGt", "dateLt", "viewsLt", "difficultyGt", "sort", "limit",
+        "offset", "subs",
+      ];
+      for (let key of canonicalParams) {
+        if (params[key] !== undefined) p[key] = params[key];
+      }
 
       Object.keys(p).forEach((key) => p[key] === undefined && delete p[key]);
       let res = await axios
