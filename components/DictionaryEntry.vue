@@ -39,34 +39,6 @@
         </template>
       </Widget>
       <EntryYouTube :text="entry.head" v-if="$adminMode" class />
-      <Widget v-if="showImages">
-        <template #title>
-          {{ $t("Images of “{text}” on the Web", { text: entry.head }) }}
-        </template>
-        <template #body>
-          <WebImages
-            :text="entry.head"
-            :entry="entry"
-            limit="10"
-            ref="images"
-            :preloaded="images"
-            @loaded="webImagesLoaded"
-          />
-          <i18n
-            path="See more images of of “{0}” on {1}"
-            tag="div"
-            class="mt-2"
-          >
-            <span>{{ entry.head }}</span>
-            <a
-              :href="`https://www.google.com/search?q=${entry.head}`"
-              class="text-secondary"
-            >
-              <u>Google</u>
-            </a>
-          </i18n>
-        </template>
-      </Widget>
     </template>
 
     <template #chatgpt>
@@ -267,13 +239,6 @@ export default {
     entry: {
       type: Object,
     },
-    showImages: {
-      default: true,
-    },
-    images: {
-      type: Array,
-      default: () => [],
-    },
     showSearchSubs: {
       default: true,
     },
@@ -297,7 +262,6 @@ export default {
       unsplashSrcs: [],
       unsplashSearchTerm: "",
       searchSubsImage: undefined,
-      webImage: undefined,
       searchSubsExample: "",
       collocationsReady: false,
       mistakesReady: false,
@@ -541,11 +505,6 @@ export default {
       );
 
       return terms;
-    },
-    webImagesLoaded(images) {
-      if (images.length > 0) {
-        this.webImage = images[0].src;
-      }
     },
   },
 };

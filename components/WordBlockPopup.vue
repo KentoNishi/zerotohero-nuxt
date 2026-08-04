@@ -1,15 +1,6 @@
 <!-- /components/WordBlockPopup.vue -->
 <template>
   <div class="word-block-popup skin-light">
-    <div class="tooltip-images" :key="`tooltip-images-${text}`">
-      <img
-        alt
-        class="image-wall-image"
-        v-for="(image, index) in images"
-        :key="`web-images-${text}-${index}`"
-        :src="`${IMAGE_PROXY}?${image.src}`"
-      />
-    </div>
     <div
       v-if="
         token &&
@@ -273,11 +264,9 @@
 
 <script>
 
-import { IMAGE_PROXY } from "../lib/config";
 // Disabled due to Netlify compilation issue with transliteration package
 // import { transliterate as tr } from "transliteration";
 import { timeout, LANGS_WITH_AZURE_TRANSLATE, languageLevels, breakSentences, highlight, convertVowelEtoIAndOtoU } from "../lib/utils";
-import WordPhotos from "../lib/word-photos";
 import Klingon from "../lib/klingon";
 
 export default {
@@ -288,9 +277,6 @@ export default {
     transliterationprop: String,
     phraseObj: Object,
     loading: {
-      default: false,
-    },
-    loadingImages: {
       default: false,
     },
     context: {
@@ -307,11 +293,9 @@ export default {
   data() {
     return {
       translation: undefined,
-      IMAGE_PROXY,
       entryClasses: { "tooltip-entry": true }, // Other classes are added upon update
       levels: undefined,
       showChatGPT: false,
-      images: [],
     };
   },
   computed: {
@@ -350,7 +334,6 @@ export default {
     if (this.$l2) this.entryClasses[`l2-${this.$l2.code}`] = true;
     if (this.$l2.han) this.entryClasses["l2-zh"] = true;
     if (this.$l2) this.levels = languageLevels(this.$l2);
-    this.loadImages();
     if (!this.preciseMatchFound) {
       await timeout(1000);
       if (!this.preciseMatchFound && LANGS_WITH_AZURE_TRANSLATE.includes(this.$l2.code) && this.$l1.code !== this.$l2.code) this.translate(this.text);
@@ -359,19 +342,6 @@ export default {
   methods: {
     // tr, // Disabled due to Netlify compilation issue with transliteration package
     highlight,
-    async loadImages() {
-      if (this.images.length === 0) {
-        let images = (
-          await WordPhotos.getGoogleImages({
-            term: this.token ? this.token.text : this.text,
-            lang: this.$l2.code,
-          })
-        ).slice(0, 5);
-        this.images = images;
-      }
-      this.loadingImages = false;
-      return this.images // to pass to popup as a promise
-    },
     async translate(text, context = undefined) {
       let translator = this.$languages.getTranslator(this.$l1, this.$l2) || [];
       this.translation = await translator.translateWithBing({
@@ -477,20 +447,6 @@ export default {
   .popover-inner-hover-area {
     padding: 0.75rem;
     position: relative;
-  }
-
-  .tooltip-images {
-    margin-bottom: 0.5rem;
-    overflow-x: auto;
-    display: flex;
-    height: 4rem;
-
-    img {
-      flex: 1;
-      height: 4rem;
-      width: auto;
-      margin: 0 0.2rem;
-    }
   }
 
   .word-pronunciation,

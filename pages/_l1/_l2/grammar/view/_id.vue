@@ -78,7 +78,6 @@
                   (!entry || grammar.pattern !== entry.simplified)
                 )
               "
-              :showImages="false"
               ref="dictionaryEntry"
               :key="`dictionary-entry-${entry.id}`"
             />

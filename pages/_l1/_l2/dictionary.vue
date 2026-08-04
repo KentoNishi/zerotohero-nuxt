@@ -213,7 +213,6 @@
             <LazyDictionaryEntry
               v-if="entry"
               :entry="entry"
-              :images="images"
               ref="dictionaryEntry"
               :key="`dictionary-entry-${entry.id}`"
             />
@@ -241,7 +240,6 @@
 </template>
 
 <script>
-import WordPhotos from "../../../lib/word-photos";
 import { ContainerQuery } from "vue-container-query";
 
 export default {
@@ -263,7 +261,6 @@ export default {
       hideDefinitions: false,
       hidePhonetics: false,
       hideWord: false,
-      images: [],
       entryKey: 0,
       paginatorKey: 0,
       sW: [],
@@ -304,11 +301,7 @@ export default {
       } words are used in TV shows, how they form collocations, and avoid common mistakes.`;
     },
     image() {
-      if (this.images.length > 0) {
-        return this.images[0].src;
-      } else {
-        return "/img/zth-share-image.jpg";
-      }
+      return "/img/zth-share-image.jpg";
     },
     wide() {
       return this.params.wide && ["lg", "xl", "xxl"].includes(this.$mq);
@@ -383,12 +376,6 @@ export default {
             if (dictionary) {
               const entry = await dictionary.get(id);
               this.entry = entry;
-              if (process.server) {
-                this.images = await WordPhotos.getGoogleImages({
-                  term: this.entry.head,
-                  lang: this.$l2.code,
-                });
-              }
             }
           }
         } else if (method === "hsk") {

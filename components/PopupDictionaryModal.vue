@@ -44,9 +44,7 @@
           text,
           token,
           words,
-          images,
           lookupInProgress,
-          loadingImages,
           context,
           phraseObj,
         }"
@@ -67,10 +65,8 @@ export default {
       context: null,
       phraseObj: null,
       words: null,
-      images: null,
       info: false,
       lookupInProgress: false,
-      loadingImages: false,
       info: null,
       savedPhrase: null,
       savedWord: null,
@@ -90,7 +86,7 @@ export default {
     this.$nuxt.$off('updatePopupDictionary', this.update);
   },
   methods: {
-    update({ token, text, context, phraseObj, words, images, info, savedPhrase, savedWord, quizMode, reveal }) {
+    update({ token, text, context, phraseObj, words, info, savedPhrase, savedWord, quizMode, reveal }) {
       if (token) {
         this.token = token;
       }
@@ -105,9 +101,6 @@ export default {
       }
       if (words) {
         this.words = words;
-      }
-      if (images) {
-        this.images = images;
       }
       if (info) {
         this.info = info;
@@ -125,8 +118,8 @@ export default {
         this.reveal = reveal;
       }
     },
-    show({ token, text, context, phraseObj, words, images, info, savedPhrase, savedWord, quizMode, reveal }) {
-      this.update({ token, text, context, phraseObj, words, images, info, savedPhrase, savedWord, quizMode, reveal });
+    show({ token, text, context, phraseObj, words, info, savedPhrase, savedWord, quizMode, reveal }) {
+      this.update({ token, text, context, phraseObj, words, info, savedPhrase, savedWord, quizMode, reveal });
       this.$refs["popup-dictionary-modal"].show();
     },
     hide() {

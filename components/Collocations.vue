@@ -18,11 +18,6 @@
                   class="mb-2 p-2"
                   style="display: flex"
                 >
-                  <WebImages
-                    :text="collocation.line"
-                    limit="2"
-                    style="flex: 1; margin-right: 2rem"
-                  />
                   <TokenizedRichText
                     tag="div"
                     :checkSaved="false"
@@ -289,16 +284,6 @@ export default {
 };
 </script>
 <style scoped>
-.saved-collocations :deep(.image-wall) {
-  flex-wrap: nowrap;
-  max-width: 100%;
-  overflow: hidden;
-}
-.saved-collocations :deep(.image-wall-image) {
-  height: 4rem;
-  max-width: 8rem;
-}
-
 .saved-collocations li {
   border-radius: 0.2rem;
   padding-top: 0.5rem;

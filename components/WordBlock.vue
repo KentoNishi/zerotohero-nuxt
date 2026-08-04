@@ -61,8 +61,6 @@ export default {
   data() {
     return {
       open: false,
-      images: [],
-      loadingImages: true,
       showPhrase: {},
       lookupInProgress: false,
       text: this.token.text,
@@ -467,7 +465,7 @@ export default {
           this.playWordAudio();
         }
       }
-      // Open it first, then load the words and images
+      // Open it first, then load the words
       this.$nuxt.$emit("showPopupDictionary", {
         token: this.token,
         text: this.text,

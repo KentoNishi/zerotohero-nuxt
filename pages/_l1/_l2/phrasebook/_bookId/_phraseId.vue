@@ -196,7 +196,6 @@
                 :exact="phraseObj.exact || phrasebook.exact"
                 :exactPhrase="phraseObj.phrase"
                 :key="`dictionary-entry-${word.id}`"
-                :showImages="false"
                 ref="dictionaryEntry"
               />
               <LazyPhraseComp
