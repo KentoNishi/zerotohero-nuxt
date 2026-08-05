@@ -24,22 +24,6 @@
                     <b-form-input id="code" v-model="form.code" type="text" :placeholder="$tb('Verification Code')"
                       required></b-form-input>
                   </b-form-group>
-                  <div class="text-left my-2 skin-light">
-                    <!-- Add a form that asks the user how they heard about us. Give them the options: Google Search, Ads, Word of Mouth, HSK Courses, YouTube, Instagram, Other (Pleae specify) -->
-                    <b-form-group id="input-group-2" label-for="acquisition_source">
-                      <b-form-select 
-                        id="acquisition_source" 
-                        v-model="form.acquisition_source" 
-                        :options="translatedAcquisitionOptions"
-                        required>
-                      </b-form-select>
-                    </b-form-group>
-                    <!-- If the user selects "Other", show an input field where they can specify how they heard about us. -->
-                    <b-form-group v-if="form.acquisition_source === 'other'" id="input-group-3" label-for="acquisition_other">
-                      <b-form-input id="acquisition_other" v-model="form.acquisition_details" type="text" :placeholder="$tb('Please specify')"
-                        required></b-form-input>
-                    </b-form-group>
-                  </div>
                   <div class="text-center">
                     <b-button type="submit" variant="primary" :disabled="verifying" class="w-100">
                       <b-spinner small v-if="verifying" />
@@ -78,8 +62,6 @@ export default {
       form: {
         email: "",
         code: "",
-        acquisition_source: null,
-        acquisition_details: null,
       },
       show: true,
       verifying: false,
@@ -111,21 +93,6 @@ export default {
   computed: {
     backgroundImage() {
       return background(this.$l2);
-    },
-    translatedAcquisitionOptions() {
-      return [
-        { value: null, text: this.$t('How did you hear about us?') },
-        { value: 'word_of_mouth', text: this.$t('Word of Mouth') },
-        { value: 'instagram', text: this.$t('Instagram') },
-        { value: 'bilibili', text: this.$t('Bilibili') },
-        { value: 'google_ads', text: this.$tb('Online Ads') },
-        { value: 'hsk_courses', text: this.$t('HSK Courses') },
-        { value: 'app_store', text: this.$t('App Store') },
-        { value: 'google_play', text: this.$tb('Google Play') },
-        { value: 'google_search', text: this.$t('Web Search') },
-        { value: 'youtube', text: this.$t('YouTube') },
-        { value: 'other', text: this.$t('Other (Please specify)') },
-      ];
     },
   },
   methods: {

@@ -59,6 +59,29 @@
                 ></b-form-input>
               </b-form-group>
 
+              <!-- How did you hear about us? (required acquisition survey) -->
+              <b-form-group id="input-group-3" label-for="acquisition_source">
+                <b-form-select
+                  id="acquisition_source"
+                  v-model="form.acquisition_source"
+                  :options="translatedAcquisitionOptions"
+                  required
+                ></b-form-select>
+              </b-form-group>
+              <b-form-group
+                v-if="form.acquisition_source === 'other'"
+                id="input-group-4"
+                label-for="acquisition_other"
+              >
+                <b-form-input
+                  id="acquisition_other"
+                  v-model="form.acquisition_details"
+                  type="text"
+                  :placeholder="$tb('Please specify')"
+                  required
+                ></b-form-input>
+              </b-form-group>
+
               <b-button class="d-block w-100" type="submit" variant="success">
                 <b-spinner small v-if="loading" />
                 <span v-else>{{ $tb("Sign Up") }}</span>
@@ -107,6 +130,8 @@ export default {
         last_name: "",
         email: "",
         password: "",
+        acquisition_source: null,
+        acquisition_details: null,
         role: 3,
         status: "draft", // Set the status to draft to prevent the user from logging in until the email is verified
       },
@@ -120,6 +145,21 @@ export default {
     },
     registrationDisabled() {
       return process.env.classicRegistrationDisabled === true;
+    },
+    translatedAcquisitionOptions() {
+      return [
+        { value: null, text: this.$t('How did you hear about us?') },
+        { value: 'word_of_mouth', text: this.$t('Word of Mouth') },
+        { value: 'instagram', text: this.$t('Instagram') },
+        { value: 'bilibili', text: this.$t('Bilibili') },
+        { value: 'google_ads', text: this.$tb('Online Ads') },
+        { value: 'hsk_courses', text: this.$t('HSK Courses') },
+        { value: 'app_store', text: this.$t('App Store') },
+        { value: 'google_play', text: this.$tb('Google Play') },
+        { value: 'google_search', text: this.$t('Web Search') },
+        { value: 'youtube', text: this.$t('YouTube') },
+        { value: 'other', text: this.$t('Other (Please specify)') },
+      ];
     },
   },
   methods: {
@@ -139,6 +179,24 @@ export default {
         );
 
         if (res && res.data && res.data.user) {
+          // Required acquisition survey — persist the answer right after signup
+          // (SPEC-042). Failure is logged but never blocks registration.
+          const userId = res.data.user.id;
+          if (userId && this.form.acquisition_source) {
+            try {
+              await this.$axios.post(`${PYTHON_SERVER}acquisition_survey`, {
+                user_id: userId,
+                acquisition_source: this.form.acquisition_source,
+                acquisition_details:
+                  this.form.acquisition_source === "other"
+                    ? this.form.acquisition_details
+                    : null,
+              });
+            } catch (err) {
+              logError(err);
+            }
+          }
+
           // Redirect to Verification Instruction Screen
           this.$router.push({
             name: "verify-email",
