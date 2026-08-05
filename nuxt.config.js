@@ -174,6 +174,10 @@ export default {
     COMMIT_REF,
     BRANCH,
     TAG,
+    // Same resolution as lib/utils/servers.js so client bundles and the
+    // nuxt-auth strategy always point at the same Flask server. Local dev:
+    // PYTHON_SERVER=http://127.0.0.1:5001/ in .env (gitignored).
+    PYTHON_SERVER: process.env.PYTHON_SERVER || 'https://python.zerotohero.ca/',
     classicRegistrationDisabled:
       process.env.DISABLE_CLASSIC_REGISTRATION === "true",
   },
