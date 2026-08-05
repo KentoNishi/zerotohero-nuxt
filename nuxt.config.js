@@ -630,7 +630,7 @@ export default {
   auth: {
     // Runs after $auth.init() resolves (config plugins run before the auth
     // module's plugin, so this must live here, not in the top-level plugins).
-    plugins: ["~/plugins/auth-user.js"],
+    plugins: ["~/plugins/auth-guard.js", "~/plugins/auth-user.js"],
     redirect: {
       login: false,
       logout: false,
