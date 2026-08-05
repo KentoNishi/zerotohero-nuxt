@@ -1,5 +1,4 @@
 import { logError } from '../lib/helper'
-import axios from 'axios'
 import { PYTHON_SERVER } from '../lib/utils'
 
 export const DEFAULT_LEVEL = 1
@@ -97,13 +96,9 @@ export const actions = {
   },
   async fetchFromFlask({ commit }) {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     try {
-      const res = await axios.get(`${PYTHON_SERVER}progress`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const res = await $nuxt.$axios.get(`${PYTHON_SERVER}progress`)
       if (res.data && res.data.progress) {
         commit('IMPORT_FROM_JSON', JSON.stringify(res.data.progress))
       }
@@ -127,21 +122,14 @@ export const actions = {
   removeL2Progress({ dispatch, commit }, { l2 }) {
     commit('REMOVE_L2_PROGRESS', { l2 })
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
-    axios.delete(`${PYTHON_SERVER}progress/${encodeURIComponent(l2.code)}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    }).catch((err) => logError(err, 'progress.js: removeL2Progress()'))
+    if (!$nuxt.$auth.strategy.token.get()) return
+    $nuxt.$axios.delete(`${PYTHON_SERVER}progress/${encodeURIComponent(l2.code)}`)
+      .catch((err) => logError(err, 'progress.js: removeL2Progress()'))
   },
   async fetchProgressFromServer() {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return false
-    token = token.replace(/^Bearer\s+/i, '')
-    let res = await axios.get(`${PYTHON_SERVER}progress`, {
-      headers: { Authorization: `Bearer ${token}` }
-    }).catch((err) => {
+    if (!$nuxt.$auth.strategy.token.get()) return false
+    let res = await $nuxt.$axios.get(`${PYTHON_SERVER}progress`).catch((err) => {
       logError(err, 'progress.js: fetchProgressFromServer()')
     })
     if (res && res.data && res.data.progress) {
@@ -181,20 +169,16 @@ export const actions = {
   },
   async pushL2({ state }, { l2, progress }) {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     const entry = progress || state.progress[l2.code]
     if (!entry) return
-    await axios.put(`${PYTHON_SERVER}progress`, {
+    await $nuxt.$axios.put(`${PYTHON_SERVER}progress`, {
       l2: l2.code,
       progress: {
         level: entry.level,
         time: entry.time,
         weeklyHours: entry.weeklyHours
       }
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
     }).catch((err) => {
       logError(err, 'progress.js: pushL2()')
     })

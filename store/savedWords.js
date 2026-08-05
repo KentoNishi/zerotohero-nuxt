@@ -1,6 +1,5 @@
 // /store/savedWords.js
 import { groupArrayBy, logError } from '../lib/helper'
-import axios from 'axios'
 import { PYTHON_SERVER } from '../lib/utils'
 
 export const state = () => {
@@ -179,13 +178,9 @@ export const actions = {
   // The server is the source of truth for logged-in users.
   async fetchFromFlask({ commit }) {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     try {
-      const res = await axios.get(`${PYTHON_SERVER}saved-words`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const res = await $nuxt.$axios.get(`${PYTHON_SERVER}saved-words`)
       if (res.data && res.data.words) {
         commit('IMPORT_WORDS_FROM_JSON', JSON.stringify(res.data.words))
       }
@@ -252,13 +247,9 @@ export const actions = {
 
   async pushWord({}, { l2, word }) {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     try {
-      await axios.put(`${PYTHON_SERVER}saved-words`, { l2, word }, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await $nuxt.$axios.put(`${PYTHON_SERVER}saved-words`, { l2, word })
     } catch (err) {
       logError(err)
     }
@@ -272,13 +263,10 @@ export const actions = {
 
   async deleteWord({}, { l2, wordId }) {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     try {
-      await axios.delete(
-        `${PYTHON_SERVER}saved-words/${encodeURIComponent(l2)}/${encodeURIComponent(wordId)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      await $nuxt.$axios.delete(
+        `${PYTHON_SERVER}saved-words/${encodeURIComponent(l2)}/${encodeURIComponent(wordId)}`
       )
     } catch (err) {
       logError(err)

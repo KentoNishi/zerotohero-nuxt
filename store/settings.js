@@ -1,5 +1,4 @@
 import { logError, PYTHON_SERVER } from "../lib/utils";
-import axios from "axios";
 import Vue from "vue";
 import SketchEngine from "@/lib/sketch-engine";
 
@@ -277,13 +276,9 @@ export const actions = {
   },
   async fetchFromFlask({ commit }) {
     if (!$nuxt.$auth.loggedIn) return;
-    let token = $nuxt.$auth.strategy.token.get();
-    if (!token) return;
-    token = token.replace(/^Bearer\s+/i, "");
+    if (!$nuxt.$auth.strategy.token.get()) return;
     try {
-      const res = await axios.get(`${PYTHON_SERVER}user-settings`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await $nuxt.$axios.get(`${PYTHON_SERVER}user-settings`);
       if (res.data && res.data.settings_classic) {
         commit(
           "SAVE_JSON_FROM_SERVER_TO_LOCAL",
@@ -297,33 +292,29 @@ export const actions = {
   // Settings are fetched from Flask's row API on login (default.vue).
   async syncSettingsToServer({ state }) {
     if (!$nuxt.$auth.loggedIn) return;
-    let token = $nuxt.$auth.strategy.token.get();
-    if (token) {
-      let settings = state
-      // For some reason sometimes settings is 'undefined', never push that to the server
-      if (settings) {
-        let settingsToSave = {}; 
-        for (let property in settings) {
-          if (property in defaultGeneralSettings) {
-            settingsToSave[property] = settings[property];
-          }
+    if (!$nuxt.$auth.strategy.token.get()) return;
+    let settings = state
+    // For some reason sometimes settings is 'undefined', never push that to the server
+    if (settings) {
+      let settingsToSave = {}; 
+      for (let property in settings) {
+        if (property in defaultGeneralSettings) {
+          settingsToSave[property] = settings[property];
         }
-        token = token.replace(/^Bearer\s+/i, "");
-        console.log("⚙️ Saving settings to the server...");
-        await axios
-          .put(
-            `${PYTHON_SERVER}user-settings`,
-            { settings_classic: settingsToSave },
-            { headers: { Authorization: `Bearer ${token}` } }
-          )
-          .catch(async (err) => {
-            logError(err, "settings.js: syncSettingsToServer()");
-          });
-        this.$toast.success("Settings saved.", {
-          position: "top-center",
-          duration: 1000,
-        });
       }
+      console.log("⚙️ Saving settings to the server...");
+      await $nuxt.$axios
+        .put(
+          `${PYTHON_SERVER}user-settings`,
+          { settings_classic: settingsToSave }
+        )
+        .catch(async (err) => {
+          logError(err, "settings.js: syncSettingsToServer()");
+        });
+      this.$toast.success("Settings saved.", {
+        position: "top-center",
+        duration: 1000,
+      });
     }
   },
 };

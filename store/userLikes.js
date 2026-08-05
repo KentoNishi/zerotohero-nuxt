@@ -20,15 +20,9 @@ export const mutations = {
 export const actions = {
   async fetchUserLikes({ commit, rootState }, l2) {
     if (!$nuxt.$auth.loggedIn) return;
-
-    let token = $nuxt.$auth.strategy.token.get();
-
-    if (token) {
-      token = token.replace(/^Bearer\s+/i, '')
+    if ($nuxt.$auth.strategy.token.get()) {
       try {
-        let response = await axios.get(`${PYTHON_SERVER}likes?l2=${encodeURIComponent(l2.code)}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        let response = await $nuxt.$axios.get(`${PYTHON_SERVER}likes?l2=${encodeURIComponent(l2.code)}`);
         // Handle success (e.g., update UI or state)
         if (response?.status !== 200) {
           logError('Error loading likes from the server', response);
@@ -49,16 +43,12 @@ export const actions = {
     const videoId = parseInt(video.id);
     if (!$nuxt.$auth.loggedIn) return
     const user = rootState.auth.user;
-    const token = $nuxt.$auth.strategy.token.get();
 
-    if (user && user.id && token) {
+    if (user && user.id && $nuxt.$auth.strategy.token.get()) {
       try {
-        const cleanToken = token.replace(/^Bearer\s+/i, '')
-        await axios.put(`${PYTHON_SERVER}likes`, {
+        await $nuxt.$axios.put(`${PYTHON_SERVER}likes`, {
           videoId,
           l2: String(l2Id)
-        }, {
-          headers: { Authorization: `Bearer ${cleanToken}` }
         })
         commit('ADD_LIKE', { youtube_id: video.youtube_id, id: videoId, l2: l2Id, tags: video.tags, title: video.title, created_on: new Date()})
       } catch (err) {
@@ -71,14 +61,11 @@ export const actions = {
     videoId = parseInt(videoId);
     if (!$nuxt.$auth.loggedIn) return;
     const user = rootState.auth.user;
-    const token = $nuxt.$auth.strategy.token.get();
 
-    if (user && user.id && token) {
+    if (user && user.id && $nuxt.$auth.strategy.token.get()) {
       try {
-        const cleanToken = token.replace(/^Bearer\s+/i, '')
-        await axios.delete(
-          `${PYTHON_SERVER}likes/${String(l2Id)}/${videoId}`,
-          { headers: { Authorization: `Bearer ${cleanToken}` } }
+        await $nuxt.$axios.delete(
+          `${PYTHON_SERVER}likes/${String(l2Id)}/${videoId}`
         )
         commit('REMOVE_LIKE', videoId);
         console.log(`User Likes: Unliked video with ID ${videoId} and L2 ${l2Id}`);

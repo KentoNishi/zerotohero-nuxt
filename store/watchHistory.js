@@ -56,15 +56,10 @@ export const actions = {
     if (state.watchHistoryLoadedForL2Id !== l2Id && !state.watchHistoryLoading) {
       if (!$nuxt.$auth.loggedIn) return
       state.watchHistoryLoading = true
-      let token = $nuxt.$auth.strategy.token.get()
-      if (token) {
-        token = token.replace(/^Bearer\s+/i, '')
-        let response = await axios.get(`${PYTHON_SERVER}watch-history?l2=${encodeURIComponent(l2.code)}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+      if ($nuxt.$auth.strategy.token.get()) {
+        let response = await $nuxt.$axios.get(`${PYTHON_SERVER}watch-history?l2=${encodeURIComponent(l2.code)}`)
         if (response?.status !== 200) {
           logError('Error loading watch history from the server', response)
-          return
         } else {
           const watchHistoryItems = response.data?.history || []
           watchHistoryItems.forEach(item => {
@@ -87,9 +82,7 @@ export const actions = {
     // First, check if this history item already exists in the user's history. If so, update it; otherwise, add it.
     let hasHistoryItem = getters.has(historyItem)
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     try {
       // Row API (SPEC-039 5.3): old per-shard video_id + l2 are remapped server-side.
       const payload = {
@@ -100,9 +93,7 @@ export const actions = {
       if (historyItem.date) {
         payload.date = new Date(historyItem.date).toISOString()
       }
-      const response = await axios.post(`${PYTHON_SERVER}watch-history`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await $nuxt.$axios.post(`${PYTHON_SERVER}watch-history`, payload)
       if (response.status !== 200) {
         logError('Error saving watch history item', response)
         return
@@ -122,13 +113,9 @@ export const actions = {
   // Remove a history item from the Vuex state and sync it to the backend.
   async remove({ commit }, historyItem) {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     try {
-      await axios.delete(`${PYTHON_SERVER}watch-history/${historyItem.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await $nuxt.$axios.delete(`${PYTHON_SERVER}watch-history/${historyItem.id}`)
     } catch (err) {
       logError(err, 'watchHistory.js: remove()')
     }

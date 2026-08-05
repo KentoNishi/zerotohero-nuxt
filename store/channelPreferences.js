@@ -54,18 +54,15 @@ export const actions = {
     if (!$nuxt.$auth.loggedIn) return;
 
     const user = rootState.auth?.user;
-    const token = $nuxt.$auth.strategy.token.get();
 
-    if (!user?.id || !token) return;
+    if (!user?.id || !$nuxt.$auth.strategy.token.get()) return;
 
     const languageCode = typeof l2 === 'string' ? l2 : l2?.code;
     if (!languageCode) return;
-    const cleanToken = token.replace(/^Bearer\s+/i, "");
 
     try {
-      const response = await axios.get(
-        `${PYTHON_SERVER}channel-preferences?l2=${encodeURIComponent(languageCode)}`,
-        { headers: { Authorization: `Bearer ${cleanToken}` } }
+      const response = await $nuxt.$axios.get(
+        `${PYTHON_SERVER}channel-preferences?l2=${encodeURIComponent(languageCode)}`
       );
 
       if (response?.status !== 200) {
@@ -101,20 +98,17 @@ export const actions = {
       }
 
       const user = rootState.auth?.user;
-      const token = $nuxt.$auth.strategy.token.get();
 
-      if (!user?.id || !token) return null;
+      if (!user?.id || !$nuxt.$auth.strategy.token.get()) return null;
       if (!l2) return null;
 
       const languageCode = typeof l2 === 'string' ? l2 : l2?.code;
       if (!languageCode) return null;
-      const cleanToken = token.replace(/^Bearer\s+/i, "");
 
       try {
-        const response = await axios.put(
+        const response = await $nuxt.$axios.put(
           `${PYTHON_SERVER}channel-preferences`,
-          { channelId, l2: languageCode, status: 'neutral' },
-          { headers: { Authorization: `Bearer ${cleanToken}` } }
+          { channelId, l2: languageCode, status: 'neutral' }
         );
 
         if (response?.status !== 200 && response?.status !== 201) {
@@ -134,20 +128,17 @@ export const actions = {
     if (!$nuxt.$auth.loggedIn) return null;
 
     const user = rootState.auth?.user;
-    const token = $nuxt.$auth.strategy.token.get();
 
-    if (!user?.id || !token) return null;
+    if (!user?.id || !$nuxt.$auth.strategy.token.get()) return null;
     if (!l2) return null;
 
     const languageCode = typeof l2 === 'string' ? l2 : l2?.code;
     if (!languageCode) return null;
-    const cleanToken = token.replace(/^Bearer\s+/i, "");
 
     try {
-      const response = await axios.put(
+      const response = await $nuxt.$axios.put(
         `${PYTHON_SERVER}channel-preferences`,
-        { channelId, l2: languageCode, status },
-        { headers: { Authorization: `Bearer ${cleanToken}` } }
+        { channelId, l2: languageCode, status }
       );
 
       if (response?.status !== 200 && response?.status !== 201) {

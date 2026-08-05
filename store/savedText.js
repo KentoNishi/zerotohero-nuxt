@@ -1,4 +1,3 @@
-import axios from 'axios'
 import { logError, PYTHON_SERVER } from '../lib/utils'
 
 const LOCAL_KEY = 'zthSavedText'
@@ -60,14 +59,10 @@ export const getters = {
 export const loadFromServer = async ({ l2, adminMode }) => {
   let items = []
   if ($nuxt.$auth.loggedIn) {
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return []
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return []
     try {
       // SPEC-039 5.4 — notes now live in Supabase (Flask /user-notes).
-      let res = await axios.get(`${PYTHON_SERVER}user-notes?l2=${encodeURIComponent(l2.code)}&timestamp=${Date.now()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      let res = await $nuxt.$axios.get(`${PYTHON_SERVER}user-notes?l2=${encodeURIComponent(l2.code)}&timestamp=${Date.now()}`)
       items = res?.data || []
     } catch (e) {
       logError(e, 'savedText.js: loadFromServer()')
@@ -95,14 +90,10 @@ export const actions = {
   },
   async loadItem({ commit }, { l2, id, adminMode }) {
     if (!$nuxt.$auth.loggedIn) return null
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return null
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return null
     let res
     try {
-      res = await axios.get(`${PYTHON_SERVER}user-notes/${id}?timestamp=${Date.now()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      res = await $nuxt.$axios.get(`${PYTHON_SERVER}user-notes/${id}?timestamp=${Date.now()}`)
     } catch (e) {
       logError(e, 'savedText.js: loadItem()')
       return null
@@ -116,13 +107,9 @@ export const actions = {
   async add({ commit }, { l2, item }) {
     item = item || { text: '', translation: '', title: 'Untitled', l2: l2.code }
     if ($nuxt.$auth.loggedIn) {
-      let token = $nuxt.$auth.strategy.token.get()
-      if (token) {
-        token = token.replace(/^Bearer\s+/i, '')
+      if ($nuxt.$auth.strategy.token.get()) {
         try {
-          let response = await axios.post(`${PYTHON_SERVER}user-notes`, item, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
+          let response = await $nuxt.$axios.post(`${PYTHON_SERVER}user-notes`, item)
           if (response?.data?.id) {
             item = response.data
           }
@@ -136,13 +123,9 @@ export const actions = {
   },
   async remove({ commit }, { l2, itemId }) {
     if ($nuxt.$auth.loggedIn) {
-      let token = $nuxt.$auth.strategy.token.get()
-      if (token) {
-        token = token.replace(/^Bearer\s+/i, '')
+      if ($nuxt.$auth.strategy.token.get()) {
         try {
-          let response = await axios.delete(`${PYTHON_SERVER}user-notes/${itemId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
+          let response = await $nuxt.$axios.delete(`${PYTHON_SERVER}user-notes/${itemId}`)
           if (response?.data) {
             return response.data
           }
@@ -155,13 +138,9 @@ export const actions = {
   },
   async update({ commit }, { l2, payload }) {
     if ($nuxt.$auth.loggedIn) {
-      let token = $nuxt.$auth.strategy.token.get()
-      if (token) {
-        token = token.replace(/^Bearer\s+/i, '')
+      if ($nuxt.$auth.strategy.token.get()) {
         try {
-          let response = await axios.patch(`${PYTHON_SERVER}user-notes/${payload.id}`, payload, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
+          let response = await $nuxt.$axios.patch(`${PYTHON_SERVER}user-notes/${payload.id}`, payload)
           if (response?.data?.id) {
             payload = response.data
           }
@@ -173,4 +152,3 @@ export const actions = {
     commit('UPDATE', { l2, payload })
   }
 }
-

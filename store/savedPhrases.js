@@ -1,4 +1,3 @@
-import axios from 'axios'
 import { logError, PYTHON_SERVER } from "../lib/utils"
 
 export const state = () => {
@@ -108,13 +107,9 @@ export const actions = {
   },
   async fetchFromFlask({ commit }) {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     try {
-      const res = await axios.get(`${PYTHON_SERVER}saved-phrases`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const res = await $nuxt.$axios.get(`${PYTHON_SERVER}saved-phrases`)
       if (res.data && res.data.phrases) {
         commit('IMPORT_PHRASES_FROM_JSON', JSON.stringify(res.data.phrases))
       }
@@ -125,9 +120,7 @@ export const actions = {
   async add({ commit, dispatch }, options) {
     commit('ADD_SAVED_PHRASE', options)
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     let phraseToSave = {
       phrase: options.phrase,
       phrasebookId: options.phrasebookId,
@@ -139,11 +132,9 @@ export const actions = {
       phraseToSave[key] = options.translations[key]
     }
     try {
-      await axios.put(`${PYTHON_SERVER}saved-phrases`, {
+      await $nuxt.$axios.put(`${PYTHON_SERVER}saved-phrases`, {
         l2: options.l2,
         phrase: phraseToSave
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       })
     } catch (err) {
       logError(err, 'savedPhrases.js: add()')
@@ -152,16 +143,12 @@ export const actions = {
   async importPhrases({ commit, dispatch, state }, rows) {
     commit('IMPORT_PHRASES', rows)
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     for (let row of rows) {
       try {
-        await axios.put(`${PYTHON_SERVER}saved-phrases`, {
+        await $nuxt.$axios.put(`${PYTHON_SERVER}saved-phrases`, {
           l2: row.l2,
           phrase: row
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
         })
       } catch (err) {
         logError(err, 'savedPhrases.js: importPhrases()')
@@ -171,13 +158,10 @@ export const actions = {
   async remove({ commit, dispatch }, options) {
     commit('REMOVE_SAVED_PHRASE', options)
     if (!$nuxt.$auth.loggedIn || !options.phrase) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     try {
-      await axios.delete(
-        `${PYTHON_SERVER}saved-phrases/${encodeURIComponent(options.l2)}/${encodeURIComponent(options.phrase)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      await $nuxt.$axios.delete(
+        `${PYTHON_SERVER}saved-phrases/${encodeURIComponent(options.l2)}/${encodeURIComponent(options.phrase)}`
       )
     } catch (err) {
       logError(err, 'savedPhrases.js: remove()')
@@ -195,14 +179,11 @@ export const actions = {
     }
     commit('REMOVE_ALL_SAVED_PHRASES', options)
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     for (let phrase of phrases) {
       try {
-        await axios.delete(
-          `${PYTHON_SERVER}saved-phrases/${encodeURIComponent(l2 || '')}/${encodeURIComponent(phrase.phrase)}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        await $nuxt.$axios.delete(
+          `${PYTHON_SERVER}saved-phrases/${encodeURIComponent(l2 || '')}/${encodeURIComponent(phrase.phrase)}`
         )
       } catch (err) {
         logError(err, 'savedPhrases.js: removeAll()')

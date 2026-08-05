@@ -1,5 +1,4 @@
 import { logError, uniqueByValue } from '../lib/helper'
-import axios from 'axios'
 import { PYTHON_SERVER } from '../lib/utils'
 
 export const state = () => {
@@ -87,13 +86,9 @@ export const actions = {
   },
   async fetchFromFlask({ commit }) {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     try {
-      const res = await axios.get(`${PYTHON_SERVER}history`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const res = await $nuxt.$axios.get(`${PYTHON_SERVER}history`)
       if (res.data && res.data.history) {
         commit('IMPORT_HISTORY_FROM_JSON', JSON.stringify(res.data.history))
       }
@@ -103,9 +98,7 @@ export const actions = {
   },
   async push() {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     let history = []
     try {
       history = JSON.parse(localStorage.getItem('zthHistory') || '[]')
@@ -113,9 +106,7 @@ export const actions = {
       logError(err, 'history.js: push()')
     }
     try {
-      await axios.put(`${PYTHON_SERVER}history`, { history }, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await $nuxt.$axios.put(`${PYTHON_SERVER}history`, { history })
     } catch (err) {
       logError(err, 'history.js: push()')
     }

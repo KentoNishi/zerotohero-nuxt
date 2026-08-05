@@ -1,4 +1,3 @@
-import axios from "axios";
 import { logError, PYTHON_SERVER } from "@/lib/utils";
 
 export const state = () => ({
@@ -30,11 +29,7 @@ export const actions = {
         return;
       }
       // SPEC-039 5.6 — subscriptions now live in Supabase via Flask.
-      const token = $nuxt.$auth.strategy.token.get() || '';
-      const res = await axios.get(
-        `${PYTHON_SERVER}user-subscription`,
-        { headers: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, '')}` } }
-      );
+      const res = await $nuxt.$axios.get(`${PYTHON_SERVER}user-subscription`);
       const data = res.data || {};
       const subscription = data.subscription !== undefined ? data.subscription : data;
       if (subscription) {
@@ -60,7 +55,7 @@ export const actions = {
     let customer_id = subscription.payment_customer_id;
     if (!customer_id) return;
     try {
-      let res = await axios.post(PYTHON_SERVER + 'cancel-subscription-at-end-of-period', {
+      let res = await $nuxt.$axios.post(PYTHON_SERVER + 'cancel-subscription-at-end-of-period', {
         customer_id
       });
       // dispatch the checkSubscription action to update the state

@@ -1,5 +1,4 @@
 import { logError, uniqueByValue, PYTHON_SERVER } from '../lib/utils'
-import axios from 'axios'
 
 export const state = () => {
   return {
@@ -99,13 +98,9 @@ export const actions = {
   },
   async fetchFromFlask({ commit }) {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     try {
-      const res = await axios.get(`${PYTHON_SERVER}bookshelf`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const res = await $nuxt.$axios.get(`${PYTHON_SERVER}bookshelf`)
       if (res.data && res.data.books) {
         commit('IMPORT_FROM_JSON', JSON.stringify(res.data.books))
       }
@@ -115,9 +110,7 @@ export const actions = {
   },
   async push() {
     if (!$nuxt.$auth.loggedIn) return
-    let token = $nuxt.$auth.strategy.token.get()
-    if (!token) return
-    token = token.replace(/^Bearer\s+/i, '')
+    if (!$nuxt.$auth.strategy.token.get()) return
     let books = []
     try {
       books = JSON.parse(localStorage.getItem('zthBookshelf') || '[]')
@@ -125,9 +118,7 @@ export const actions = {
       logError(err, 'bookshelf.js: push()')
     }
     try {
-      await axios.put(`${PYTHON_SERVER}bookshelf`, { books }, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await $nuxt.$axios.put(`${PYTHON_SERVER}bookshelf`, { books })
     } catch (err) {
       logError(err, 'bookshelf.js: push()')
     }

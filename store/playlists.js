@@ -1,5 +1,4 @@
 import Vue from "vue";
-import axios from "axios";
 import { logError, PYTHON_SERVER } from "../lib/utils";
 
 export const state = () => ({
@@ -33,13 +32,10 @@ export const mutations = {
 export const actions = {
   async loadPlaylists({ commit }, { l2, forceRefresh }) {
     if (!$nuxt.$auth.loggedIn) return;
-    let token = $nuxt.$auth.strategy.token.get();
-    if (!token) return;
-    token = token.replace(/^Bearer\s+/i, "");
+    if (!$nuxt.$auth.strategy.token.get()) return;
     try {
-      const response = await axios.get(
-        `${PYTHON_SERVER}playlists?l2=${l2.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await $nuxt.$axios.get(
+        `${PYTHON_SERVER}playlists?l2=${l2.id}`
       );
       let playlists = response?.data?.playlists || [];
       playlists = playlists.sort((x, y) =>
@@ -52,18 +48,15 @@ export const actions = {
   },
   async createPlaylist({ commit }, { l2, playlist }) {
     if (!$nuxt.$auth.loggedIn) return;
-    let token = $nuxt.$auth.strategy.token.get();
-    if (!token) return;
-    token = token.replace(/^Bearer\s+/i, "");
+    if (!$nuxt.$auth.strategy.token.get()) return;
     try {
-      const response = await axios.post(
+      const response = await $nuxt.$axios.post(
         `${PYTHON_SERVER}playlists`,
         {
           title: playlist.title,
           l2: String(l2.id),
           videos: playlist.videos || []
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+        }
       );
       const id = response?.data?.id;
       if (id) {
@@ -83,14 +76,11 @@ export const actions = {
   },
   async updatePlaylist({ commit }, { l2, playlist }) {
     if (!$nuxt.$auth.loggedIn) return;
-    let token = $nuxt.$auth.strategy.token.get();
-    if (!token) return;
-    token = token.replace(/^Bearer\s+/i, "");
+    if (!$nuxt.$auth.strategy.token.get()) return;
     try {
-      await axios.put(
+      await $nuxt.$axios.put(
         `${PYTHON_SERVER}playlists/${playlist.id}`,
-        { title: playlist.title, videos: playlist.videos || [] },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { title: playlist.title, videos: playlist.videos || [] }
       );
       commit("UPDATE_PLAYLIST", {
         l2,
@@ -102,13 +92,9 @@ export const actions = {
   },
   async deletePlaylist({ commit }, { l2, playlist }) {
     if (!$nuxt.$auth.loggedIn) return;
-    let token = $nuxt.$auth.strategy.token.get();
-    if (!token) return;
-    token = token.replace(/^Bearer\s+/i, "");
+    if (!$nuxt.$auth.strategy.token.get()) return;
     try {
-      await axios.delete(`${PYTHON_SERVER}playlists/${playlist.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await $nuxt.$axios.delete(`${PYTHON_SERVER}playlists/${playlist.id}`);
     } catch (err) {
       logError(err, "playlists.js: deletePlaylist()");
     }
@@ -121,13 +107,9 @@ export const actions = {
       if (playlistFromStore) return playlistFromStore;
     }
     if (!$nuxt.$auth.loggedIn) return null;
-    let token = $nuxt.$auth.strategy.token.get();
-    if (!token) return null;
-    token = token.replace(/^Bearer\s+/i, "");
+    if (!$nuxt.$auth.strategy.token.get()) return null;
     try {
-      const response = await axios.get(`${PYTHON_SERVER}playlists/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await $nuxt.$axios.get(`${PYTHON_SERVER}playlists/${id}`);
       return response?.data?.playlist || null;
     } catch (err) {
       logError(err, "playlists.js: fetchPlaylist()");

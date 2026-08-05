@@ -1,5 +1,4 @@
 import DateHelper from "../lib/date-helper";
-import axios from "axios";
 import he from "he"; // html entities
 import {
   escapeRegExp,
@@ -11,6 +10,10 @@ import {
 } from "../lib/utils";
 
 export default ({ app }, inject) => {
+  // Use the Nuxt axios instance so @nuxtjs/auth attaches the token and
+  // auto-refreshes expired access tokens on 401 (SPEC-039 5.7/5.8).
+  const axios = app.$axios;
+
   inject("directus", {
     langCodeById(langId) {
       let lang = app.$languages && app.$languages.getById
