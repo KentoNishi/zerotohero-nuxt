@@ -95,23 +95,27 @@ export default {
         let res = await this.$axios.post(`${PYTHON_SERVER}auth/password-request`, { email });
         this.emailSent = true;
       } catch (err) {
-        if (err.response?.data?.error?.message) {
-          if (err.response.data.error.code === 103) {
-            // User status is not 'active', redirect to email verification
-            this.$router.push({
-              name: "verify-email",
-              query: {
-                email: encodeURIComponent(this.form.email),
-              },
-            });
-          } else {
-            this.$toast.error(err.response?.data?.error?.message, {
-              position: "top-center",
-              duration: 5000,
-            });
-          }
+        const data = err.response && err.response.data;
+        // Flask returns { errors: [{ code, message }] }; old Directus used
+        // { error: { code, message } }. Accept both.
+        const firstError =
+          (data && data.errors && data.errors[0]) || (data && data.error) || {};
+        const message = firstError.message || "There has been an error.";
+
+        if (
+          firstError.code === 103 ||
+          firstError.code === "email_not_confirmed"
+        ) {
+          // User status is not 'active', redirect to email verification
+          this.$router.push({
+            name: "verify-email",
+            query: {
+              // vue-router encodes query values; do not pre-encode.
+              email: this.form.email,
+            },
+          });
         } else {
-          this.$toast.error("There has been an error.", {
+          this.$toast.error(message, {
             position: "top-center",
             duration: 5000,
           });
