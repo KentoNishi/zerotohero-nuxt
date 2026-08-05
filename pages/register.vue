@@ -159,7 +159,9 @@ export default {
           const firstError = (data.errors && data.errors[0]) || data.error || {};
           let message = firstError.message || "There has been an error.";
 
-          if (firstError.code === "email_already_registered" || firstError.code === 204) {
+          if (firstError.code === "rate_limited") {
+            message = this.$tb("error.create_account_failed");
+          } else if (firstError.code === "email_already_registered" || firstError.code === 204) {
             message = this.$tb(
               "Your email {email} has already been registered, please login.",
               { email: this.form.email }
