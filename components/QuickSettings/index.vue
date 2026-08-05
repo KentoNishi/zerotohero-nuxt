@@ -272,7 +272,10 @@ export default {
       },
     },
     userIsAdmin() {
-      return this.$auth.user && this.$auth.user.role == 1;
+      // Post-migration: Flask exposes the Supabase `app_metadata.is_admin`
+      // claim as a camelCase `isAdmin` boolean on the user payload
+      // (previously Directus role 1).
+      return this.$auth.user && this.$auth.user.isAdmin;
     },
     annotationSettingsClass() {
       return {
