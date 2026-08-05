@@ -24,7 +24,10 @@ export const actions = {
     try {
       let active = false;
       if (!userId) {
-        commit("SET_ACTIVE", false);
+        // No user id (e.g. Sale.vue's readiness check firing before the
+        // layout resolves auth): don't clobber an already-resolved
+        // subscription state — resetting `active` here is what made the Pro
+        // badge/gate flicker off after the layout had correctly set it.
         commit("SET_CHECKING", false);
         return;
       }

@@ -39,8 +39,14 @@ export default {
   },
   methods: {
     async checkSubscription() {
-      // Ensure data is loaded
-      await this.$store.dispatch('subscriptions/checkSubscription');
+      // Ensure data is loaded. Pass the user id (when available) so this
+      // readiness check never resets an already-resolved Pro state — see
+      // store/subscriptions.js. Without an id the store now skips instead
+      // of flipping `active` back to false.
+      await this.$store.dispatch(
+        'subscriptions/checkSubscription',
+        this.$auth?.user?.id
+      );
       this.$nextTick(() => {
         this.ready = true; // Set ready to true to allow transition
       });
