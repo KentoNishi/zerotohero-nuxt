@@ -151,8 +151,9 @@ export default {
     },
     async getDrill(grammarID) {
       try {
-        let response = await this.$directus.get(
-          `items/drills?filter[grammar_id][eq]=${grammarID}&filter[l2][eq]=${this.$l2.id}&fields=*,file.*`
+        let response = await this.$directus.content(
+          "drills",
+          `filter[grammar_id][eq]=${grammarID}&filter[l2][eq]=${this.$l2.id}`
         );
         response = response.data;
         if (response && response.data && response.data[0]) {

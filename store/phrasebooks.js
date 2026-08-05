@@ -42,9 +42,9 @@ export const mutations = {
 
 export const actions = {
   async load(context, { l2, adminMode }) {
-    let response = await this.$directus.get(
-      `items/phrasebook?sort=title&filter[l2][eq]=${l2.id
-      }&fields=id,description,exact,title,l2,tv_show&limit=500&timestamp=${adminMode ? Date.now() : 0}`
+    let response = await this.$directus.content(
+      "phrasebooks",
+      `sort=title&filter[l2][eq]=${l2.id}&fields=id,description,exact,title,l2,tv_show&limit=500`
     );
     let phrasebooks =
       response.data.data
@@ -54,8 +54,11 @@ export const actions = {
     context.commit('LOAD_PHRASEBOOKS', { l2, phrasebooks })
   },
   async loadPhrases(context, { l2, bookId, adminMode }) {
-    let path = `items/phrasebook/${bookId}?fields=*,tv_show&timestamp=${adminMode ? Date.now() : 0}`;
-    let response = await this.$directus.get(path);
+    let response = await this.$directus.contentGet(
+      "phrasebooks",
+      bookId,
+      "fields=*,tv_show"
+    );
     if (response.data && response.data.data) {
       let phrasebook = response.data.data;
       let phrases = Papa.parse(phrasebook.phrases, {
@@ -68,8 +71,8 @@ export const actions = {
     }
   },
   async add(context, { l2, phrasebook }) {
-    let response = await this.$directus.post(
-      `items/phrasebooks`,
+    let response = await this.$directus.contentPost(
+      "phrasebooks",
       phrasebook
     );
     if (response && response.data) {
@@ -83,9 +86,7 @@ export const actions = {
     let token = $nuxt.$auth.strategy.token.get()
     if (!token) return
     token = token.replace('Bearer ', '')
-    let response = await this.$directus.delete(
-      `items/phrasebook/${phrasebook.id}`
-    );
+    let response = await this.$directus.contentDelete("phrasebooks", phrasebook.id);
     if (response && response.data) {
       context.commit('REMOVE_PHRASEBOOK', { l2, phrasebook })
     }
@@ -99,10 +100,10 @@ export const actions = {
       return ph
     })
     try {
-      let response = await this.$directus.patch(
-        `items/phrasebook/${phrasebook.id}`,
-        { phrases: Papa.unparse(phrases) },
-        { contentType: "application/json" }
+      let response = await this.$directus.contentPatch(
+        "phrasebooks",
+        phrasebook.id,
+        { phrases: Papa.unparse(phrases) }
       );
       response = response.data;
       if (response && response.data) {
@@ -121,10 +122,10 @@ export const actions = {
       return ph
     })
     try {
-      let response = await this.$directus.patch(
-        `items/phrasebook/${phrasebook.id}`,
-        { phrases: Papa.unparse(phrases) },
-        { contentType: "application/json" }
+      let response = await this.$directus.contentPatch(
+        "phrasebooks",
+        phrasebook.id,
+        { phrases: Papa.unparse(phrases) }
       );
       response = response.data;
       if (response && response.data) {

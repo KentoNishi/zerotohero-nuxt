@@ -100,8 +100,9 @@ export default {
   computed: {
   },
   async created() {
-    let response = await this.$directus.get(
-      `items/tutoring_kit?fields=id,name,reading,free_talk,writing,level`
+    let response = await this.$directus.content(
+      "tutoring_kit",
+      "fields=id,name,reading,free_talk,writing,level"
     );
     if (response) {
       this.lessons = response.data.data || [];

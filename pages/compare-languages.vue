@@ -276,7 +276,7 @@ export default {
       
       try {
         // Fetch the phrasebook with the specified ID
-        let res = await this.$directus.get(`items/phrasebook/${this.bookId}`);
+        let res = await this.$directus.contentGet("phrasebooks", this.bookId);
         
         if (res && res.data) {
           let phrasebook = res.data.data;

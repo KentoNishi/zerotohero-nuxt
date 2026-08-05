@@ -185,8 +185,8 @@ export default {
       }
       this.saving = true;
       try {
-        let res = await this.$directus.post(
-          `items/phrasebook`,
+        let res = await this.$directus.contentPost(
+          "phrasebooks",
           phrasebook
         );
         if (res && res.data) {

@@ -2,86 +2,16 @@ import DateHelper from "../lib/date-helper";
 import axios from "axios";
 import he from "he"; // html entities
 import {
-  randBase64,
-  proxy,
   escapeRegExp,
   logError,
-  DIRECTUS_API_URL,
   PYTHON_SERVER,
-  LP_DIRECTUS_TOOLS_URL,
   WEB_URL,
   reduceTags,
   parseQueryString,
 } from "../lib/utils";
 
-export const YOUTUBE_VIDEOS_TABLES = {
-  2: [
-    1874, // Basque
-    6858, // Vietnamese
-  ],
-  3: [
-    3179, // Korean
-  ],
-  4: [
-    7731, // Chinese
-  ],
-  5: [
-    1824, // English
-  ],
-  6: [
-    1540, // German
-  ],
-  7: [
-    2780, // Japanese
-  ],
-  8: [
-    1943, // French
-  ],
-  9: [
-    5980, // Spanish
-    1167, // Catalan
-    5644, // Russian
-  ],
-  10: [
-    6615, // Turkish - 32,150 videos
-    5326, // Polish - 27,971 videos
-    4677, // Dutch - 22,453 videos
-  ],
-  11: [
-    2351, // Hebrew
-    5332, // Portuguese
-    1800, // Greek
-    6736, // Ukrainian
-    1222, // Czech
-    346, // Arabic
-    5892, // Slovak
-    4247, // Malay
-  ],
-  12: [
-    2645, // Italian
-  ],
-  13: [
-    2601, // Indonesian - 19,154 videos
-    6115, // Swedish - 15,236 videos
-    4759, // Norwegian - 12,061 videos
-    4448, // Min Nan - 8,717 videos
-  ],
-  14: [
-    6325, // Thai - 15,576 videos
-    4392, // Burmese
-  ]
-};
-
 export default ({ app }, inject) => {
   inject("directus", {
-    host: process.server
-      ? process.env.baseUrl
-      : window.location.protocol +
-        "//" +
-        window.location.hostname +
-        ":" +
-        window.location.port,
-
     langCodeById(langId) {
       let lang = app.$languages && app.$languages.getById
         ? app.$languages.getById(langId)
@@ -89,78 +19,161 @@ export default ({ app }, inject) => {
       return lang ? lang.code : null;
     },
 
-    tokenOptions(options = {}) {
-      let token = app.$auth.strategy.token.get();
-      if (token) {
-        if (!options.headers) options.headers = {};
-        options.headers.Authorization = token;
-        return options;
-      } else return options;
-    },
-
     /**
-     * We append a cors=... query string because directus server caching seems to 'remember' cors header, causing problems when multiple doamins try ti access
-     * @param {String} url
-     * @returns Url with cors string attached
+     * SPEC-039 5.7/5.8 — every Classic data call now goes to Flask with the
+     * nuxt-auth token (a verified Supabase JWT through Flask). Directus is
+     * gone from Classic.
      */
-    appendHostCors(url) {
-      let joiner = url.includes("?") ? "&" : "?";
-      return url + joiner + `cors=${this.host}`;
+    flaskHeaders() {
+      let token = app.$auth && app.$auth.strategy.token.get();
+      let headers = { "Content-Type": "application/json" };
+      if (token) headers.Authorization = token;
+      return headers;
     },
 
-    async patch(path, payload) {
+    // ── Curated content wrapper (SPEC-039 5.8) ────────────────────────
+
+    async content(collection, query = "") {
+      let url = `${PYTHON_SERVER}content/${collection}`;
+      if (query) url += (url.includes("?") ? "&" : "?") + query;
       let res = await axios
-        .patch(
-          this.appendHostCors(DIRECTUS_API_URL + path),
-          payload,
-          this.tokenOptions()
-        )
-        .catch((err) => logError(err));
-      if (res) return res;
+        .get(url, { headers: this.flaskHeaders() })
+        .catch((err) => logError(err, `directus.js: content(${collection})`));
+      return res;
     },
 
-    async post(path, payload, catchErrors = true) {
+    async contentGet(collection, id, query = "") {
+      let url = `${PYTHON_SERVER}content/${collection}/${id}`;
+      if (query) url += (url.includes("?") ? "&" : "?") + query;
       let res = await axios
-        .post(
-          this.appendHostCors(DIRECTUS_API_URL + path),
-          payload,
-          this.tokenOptions()
-        )
-        .catch((err) => {
-          if (catchErrors) logError(err);
-          else 
-            throw err;
-        });
-      if (res) return res;
+        .get(url, { headers: this.flaskHeaders() })
+        .catch((err) => logError(err, `directus.js: contentGet(${collection})`));
+      return res;
     },
 
-    async delete(path) {
+    async contentPost(collection, payload) {
       let res = await axios
-        .delete(
-          this.appendHostCors(DIRECTUS_API_URL + path),
-          this.tokenOptions()
-        )
-        .catch((err) => logError(err));
-      if (res) return res;
+        .post(`${PYTHON_SERVER}content/${collection}`, payload, {
+          headers: this.flaskHeaders(),
+        })
+        .catch((err) => logError(err, `directus.js: contentPost(${collection})`));
+      return res;
     },
 
-    async get(path, params = {}) {
+    async contentPatch(collection, id, payload) {
       let res = await axios
-        .get(
-          this.appendHostCors(DIRECTUS_API_URL + path),
-          this.tokenOptions({ params })
-        )
-        .catch((err) => logError(err));
-      if (res) return res;
+        .patch(`${PYTHON_SERVER}content/${collection}/${id}`, payload, {
+          headers: this.flaskHeaders(),
+        })
+        .catch((err) => logError(err, `directus.js: contentPatch(${collection})`));
+      return res;
     },
 
-    async getData(path, params = {}) {
-      let res = await this.get(path, params);
-      if (res?.data?.data) {
-        let data = res.data.data;
-        return data;
-      }
+    async contentDelete(collection, id) {
+      let res = await axios
+        .delete(`${PYTHON_SERVER}content/${collection}/${id}`, {
+          headers: this.flaskHeaders(),
+        })
+        .catch((err) => logError(err, `directus.js: contentDelete(${collection})`));
+      return res;
     },
+
+    // ── Classic dictionary + feedback adapters (SPEC-039 5.8) ─────────
+
+    async classicDict(table, query = "") {
+      let url = `${PYTHON_SERVER}classic/dictionary/${table}`;
+      if (query) url += (url.includes("?") ? "&" : "?") + query;
+      let res = await axios
+        .get(url, { headers: this.flaskHeaders() })
+        .catch((err) => logError(err, `directus.js: classicDict(${table})`));
+      return res;
+    },
+
+    async postFeedback(payload) {
+      let res = await axios
+        .post(`${PYTHON_SERVER}classic/feedback`, payload, {
+          headers: this.flaskHeaders(),
+        })
+        .catch((err) => logError(err, "directus.js: postFeedback()"));
+      return res;
+    },
+
+    async deleteAccount() {
+      let res = await axios
+        .delete(`${PYTHON_SERVER}auth/delete-account`, {
+          headers: this.flaskHeaders(),
+        })
+        .catch((err) => logError(err, "directus.js: deleteAccount()"));
+      return res;
+    },
+
+    // ── Stats (SPEC-039 5.8) ──────────────────────────────────────────
+
+    async statsVideoCounts() {
+      let res = await axios
+        .get(`${PYTHON_SERVER}stats/video-counts`)
+        .catch((err) => logError(err, "directus.js: statsVideoCounts()"));
+      return res;
+    },
+
+    async statsContentCounts(l2Code) {
+      let res = await axios
+        .get(`${PYTHON_SERVER}stats/content-counts?l2=${encodeURIComponent(l2Code)}`)
+        .catch((err) => logError(err, "directus.js: statsContentCounts()"));
+      return res;
+    },
+
+    // ── Admin video tools (SPEC-039 5.8) ──────────────────────────────
+
+    async adminVideoList(query = "") {
+      let url = `${PYTHON_SERVER}admin/videos`;
+      if (query) url += (url.includes("?") ? "&" : "?") + query;
+      let res = await axios
+        .get(url, { headers: this.flaskHeaders() })
+        .catch((err) => logError(err, "directus.js: adminVideoList()"));
+      return res;
+    },
+
+    async adminVideoDelete(id) {
+      let res = await axios
+        .delete(`${PYTHON_SERVER}admin/videos/${id}`, {
+          headers: this.flaskHeaders(),
+        })
+        .catch((err) => logError(err, "directus.js: adminVideoDelete()"));
+      return res;
+    },
+
+    // ── Admin shows/talks CRUD (SPEC-039 5.8) ─────────────────────────
+
+    async createShow(type, payload) {
+      // type: 'tv-shows' | 'talks'
+      let res = await axios
+        .post(`${PYTHON_SERVER}admin/${type}`, payload, {
+          headers: this.flaskHeaders(),
+        })
+        .catch((err) => logError(err, "directus.js: createShow()"));
+      return res;
+    },
+
+    async patchShow(type, id, payload) {
+      let res = await axios
+        .patch(`${PYTHON_SERVER}admin/${type}/${id}`, payload, {
+          headers: this.flaskHeaders(),
+        })
+        .catch((err) => logError(err, "directus.js: patchShow()"));
+      return res;
+    },
+
+    async deleteShow(type, id) {
+      let res = await axios
+        .delete(`${PYTHON_SERVER}admin/${type}/${id}`, {
+          headers: this.flaskHeaders(),
+        })
+        .catch((err) => logError(err, "directus.js: deleteShow()"));
+      return res;
+    },
+
+    // ── Content reads already on Flask (SPEC-039 5.5) ─────────────────
 
     /**
      * Count the number of episodes in a show
@@ -197,21 +210,18 @@ export default ({ app }, inject) => {
       }
     },
 
-    async deleteVideo({ id, l2Id }) {
-      let res = await this.delete(`${this.youtubeVideosTableName(l2Id)}/${id}`);
-      if (res?.status === 204) {
-        return true;
-      }
+    async deleteVideo({ id }) {
+      let res = await this.adminVideoDelete(id);
+      return res && res.status === 204;
     },
 
-    async patchVideo({ id, l2Id, payload, query }) {
-      query = query ? `?${query}` : "";
-      let queryURL = `${this.youtubeVideosTableName(l2Id)}/${id}${query}`;
-      let res = await this.patch(queryURL, payload);
-      if (res?.data?.data) {
-        let data = res.data.data;
-        return data;
-      }
+    async patchVideo({ id, payload }) {
+      let res = await axios
+        .patch(`${PYTHON_SERVER}admin/videos/${id}`, payload, {
+          headers: this.flaskHeaders(),
+        })
+        .catch((err) => logError(err, "directus.js: patchVideo()"));
+      return res && res.data && res.data.video;
     },
 
     normalizeDifficulty(video) {
@@ -252,7 +262,7 @@ export default ({ app }, inject) => {
         normalized[key.replace(/=$/, "")] = params[key];
       }
       params = normalized;
-      // SPEC-039 5.5 — Directus filter params are translated to the Flask
+      // SPEC-039 5.5 — legacy filter params are translated to the Flask
       // /search-videos contract; ids returned by Flask are consolidated.
       let p = {
         l2: l2Code,
@@ -260,7 +270,7 @@ export default ({ app }, inject) => {
         offset: params.offset || 0,
         limit: params.limit || 50,
       };
-      // Directus filter keys are `filter[field][op]`. `key` arrives as
+      // Legacy filter keys are `filter[field][op]`. `key` arrives as
       // `field[op]`, so the canonical lookup is `filter[` + `field][op]`.
       const filter = (key) => params["filter[" + key.replace("[", "][")];
       const eq = (key) => filter(`${key}[eq]`);
@@ -318,24 +328,11 @@ export default ({ app }, inject) => {
     },
 
     async searchCaptions({ l2Obj, tv_show, category, terms, limit, sort, timestamp }) {
-      if (!l2Obj) throw "Directus.searchCaptions: l2Obj is not set!";
+      if (!l2Obj) throw "searchCaptions: l2Obj is not set!";
 
-      let url
-      let params = {}
-      // const server = 'php' // 'python' or 'php'
-      const server = 'python' // 'python' or 'php'
-      if (server === 'python') {
-        const l2_code = l2Obj.code;
-        params.l2 = l2_code;
-        url = PYTHON_SERVER + "subs-search";
-      }
-      else if (server === 'php') {
-        const l2Id = l2Obj.id;
-        let suffix = this.youtubeVideosTableSuffix(l2Id);
-        params.l2 = l2Id
-        params.suffix = suffix ? '_' + suffix : ''
-        url = LP_DIRECTUS_TOOLS_URL + "videos";
-      }
+      let params = {};
+      // SPEC-039 5.5 — subs search served by Flask on Postgres/pg_trgm.
+      params.l2 = l2Obj.code;
       if (tv_show) params.tv_show = tv_show;
       if (category) params.category = category;
       if (terms) params.terms = terms.join(",");
@@ -343,13 +340,15 @@ export default ({ app }, inject) => {
       if (limit) params.limit = limit;
       if (sort) params.sort = sort;
       let res = await axios
-        .get(this.appendHostCors(url), { params })
-        .catch((err) => logError(err));
+        .get(`${PYTHON_SERVER}subs-search`, { params })
+        .catch((err) => logError(err, "directus.js: searchCaptions()"));
       if (res?.data) {
         let videos = res.data;
         return videos;
       } else return [];
     },
+
+    // ── Video admin create (SPEC-039 5.8) ─────────────────────────────
 
     async postVideo(video, l2, limit = false, tries = 0) {
       let lines = video.subs_l2 || [];
@@ -393,13 +392,13 @@ export default ({ app }, inject) => {
       if (video.tv_show) data.tv_show = video.tv_show.id;
       if (video.talk) data.talk = video.talk.id;
       try {
-        let response = await this.post(
-          `${this.youtubeVideosTableName(l2.id)}?fields=id,tv_show,talk`,
-          data
+        let res = await axios.post(
+          `${PYTHON_SERVER}admin/videos`,
+          data,
+          { headers: this.flaskHeaders() }
         );
-        response = response.data;
-        if (response && response.data) {
-          return response.data.id;
+        if (res && res.data) {
+          return res.data.id;
         }
       } catch (err) {
         if (tries > 1) return; // Only 2 tries
@@ -410,35 +409,7 @@ export default ({ app }, inject) => {
       }
     },
 
-    // Returns '' (empty string), '1', '2, '3', etc.
-    youtubeVideosTableSuffix(langId) {
-      langId = parseInt(langId);
-      if (!langId)
-        throw "Directus.youtubeVideosTableSuffix: langId is not set!";
-      let suffix = "";
-      for (let key in YOUTUBE_VIDEOS_TABLES) {
-        if (YOUTUBE_VIDEOS_TABLES[key].includes(langId)) {
-          suffix = key;
-        }
-      }
-      return suffix;
-    },
-
-    youtubeVideosTableHasOnlyOneLanguage(langId) {
-      if (!langId)
-        throw "Directus.youtubeVideosTableHasOnlyOneLanguage: langId is not set!";
-      for (let key in YOUTUBE_VIDEOS_TABLES) {
-        if (YOUTUBE_VIDEOS_TABLES[key].includes(langId)) {
-          return YOUTUBE_VIDEOS_TABLES[key].length === 1;
-        }
-      }
-    },
-
-    youtubeVideosTableName(langId) {
-      let suffix = this.youtubeVideosTableSuffix(langId);
-      if (suffix) suffix = "_" + suffix;
-      return `items/youtube_videos${suffix}`;
-    },
+    // ── Shows/talks enrichment (SPEC-039 5.5) ─────────────────────────
 
     async checkShows(videos, langId, adminMode = false) {
       const l2Code = this.langCodeById(langId);
@@ -464,138 +435,41 @@ export default ({ app }, inject) => {
       return videos;
     },
 
+    // ── Auth helpers (SPEC-039 5.7 — Flask → GoTrue) ──────────────────
+
     async sendPasswordResetEmail({ email }) {
       let host = WEB_URL;
       if (process.server) host = process.env.baseUrl;
       let reset_url = `${host}/password-reset`;
-      let res = await this.post(`auth/password/request`, {
-        email,
-        reset_url,
-      }, false); // Don't catch errors
+      let res = await axios
+        .post(
+          `${PYTHON_SERVER}auth/password-request`,
+          { email, reset_url },
+          { headers: this.flaskHeaders() }
+        )
+        .catch((err) => {
+          throw err; // Don't catch errors
+        });
       return res && res.status === 200;
     },
 
     async resetPassword({ token, password }) {
-      let res = await this.post(`auth/password/reset`, {
-        token,
-        password,
-      });
+      let res = await axios
+        .post(
+          `${PYTHON_SERVER}auth/password-reset`,
+          { token, password },
+          { headers: this.flaskHeaders() }
+        )
+        .catch((err) => logError(err, "directus.js: resetPassword()"));
       return res && res.status === 200;
     },
 
-    // Initialize the user data record if there isn't one
-    async createNewUserDataRecord(token, payload = {}) {
-      let res = await this.post(`items/user_data`, payload).catch((err) => {
-        console.log(
-          "Axios error in savedWords.js: err, url, payload",
-          err,
-          url,
-          payload
-        );
-      });
-      if (res && res.data && res.data.data) {
-        let userDataId = res.data.data.id;
-        return userDataId;
-      }
-    },
-
-    /**
-     * Initialize and fetch the user data if they are logged in.
-     * If no user data is found, create and store it.
-     * If the user is not logged in or the token is invalid, log out and redirect.
-     */
-    async fetchOrCreateUserData() {
-      // Check if the user is logged in, return false if not
-      if (!this.isLoggedIn()) {
-        return false;
-      }
-
-      // Get the user's authentication token
-      const token = this.getToken();
-      // If the token is not available, log out and redirect the user
-      if (!token) {
-        this.logoutAndRedirect();
-        return;
-      }
-
-      // Fetch the user's data using the token
-      const userData = await this.fetchUserData(token);
-      // If no user data is found, create and store new user data
-      if (!userData) {
-        await this.createAndStoreUserData(token);
-      } else {
-        // If user data is found, store it in the application
-        this.storeUserData(userData);
-      }
-    },
-
-    isLoggedIn() {
-      return app.$auth && app.$auth.loggedIn && app.$auth.user;
-    },
-
-    async getCurrentUser() {
-      // Make sure to bust cache
-      let res = await this.get(`users/me?timestamp=${Date.now()}`);
-      let user = res?.data?.data;
-      return user;
-    },
-
-    getToken() {
-      const token = app.$auth.strategy.token.get();
-      return token ? token.replace("Bearer ", "") : undefined;
-    },
-
-    logoutAndRedirect() {
-      app.$auth.setUser(null);
-      app.$toast.error($tb("Sorry, but you need to login again."), {
-        position: "top-center",
-        duration: 5000,
-      });
-      app.$router.push({ name: "login" });
-    },
-
-    async fetchUserData(token) {
-      const user = app.$auth.user;
-      const userDataRes = await this.get(
-        `items/user_data?fields=id,owner,saved_hits,saved_collocations&filter[owner][eq]=${
-          user.id
-        }&limit=1&timestamp=${Date.now()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      return (
-        userDataRes &&
-        userDataRes.data &&
-        userDataRes.data.data &&
-        userDataRes.data.data[0]
-      );
-    },
-
-    async createAndStoreUserData(token) {
-      const dataId = await this.createNewUserDataRecord(token);
-      app.$auth.$storage.setUniversal("dataId", dataId);
-    },
-
-    storeUserData({ id }) {
-      app.$auth.$storage.setUniversal("dataId", id);
-      // Saved words now come from Flask's row API (SPEC-034); the Directus
-      // saved_words blob is no longer read here.
-      app.store.dispatch("savedWords/fetchFromFlask");
-      // Progress, settings, and saved phrases come from Flask's row API
-      // (SPEC-039 5.2); only the remaining Classic-only fields still load from
-      // the Directus blob.
-      app.store.dispatch("savedPhrases/fetchFromFlask");
-      app.store.dispatch("progress/fetchFromFlask");
-      app.store.dispatch("settings/fetchFromFlask");
-      app.store.dispatch("history/fetchFromFlask");
-      app.store.dispatch("bookshelf/fetchFromFlask");
-    },
+    // ── Subscriptions (SPEC-039 5.6 — Flask) ──────────────────────────
 
     async checkSubscription() {
       const userId = app.$auth?.user?.id;
       if (!userId) return false;
       try {
-        // SPEC-039 5.6 — subscriptions served by Flask /user-subscription.
         const token = app.$auth.strategy.token.get() || '';
         let res = await axios.get(
           `${PYTHON_SERVER}user-subscription`,

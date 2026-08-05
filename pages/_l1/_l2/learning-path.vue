@@ -30,7 +30,7 @@
         } hours. From zero to mastery in ${(($l2.hours || 1100) * 4)
           .toString()
           .replace(/\B(?=(\d{3})+(?!\d))/g, ',')} hours!`"
-        :image="courses['A1'][0].thumbnail.data.full_url"
+        :image="courses['A1'][0].thumbnail"
       />
       <SocialHead
         v-else
@@ -116,7 +116,7 @@
                   :resource="{
                     title: course.title,
                     url: course.url,
-                    thumbnail: course.thumbnail.data.full_url,
+                    thumbnail: course.thumbnail,
                   }"
                   :buttonText="$t('Open Course')"
                   :showThumbnail="false"
@@ -215,7 +215,7 @@
                   :resource="{
                     title: resource.title,
                     url: resource.url,
-                    thumbnail: resource.thumbnail.data.full_url,
+                    thumbnail: resource.thumbnail,
                   }"
                 />
               </div>
@@ -403,8 +403,9 @@ export default {
       return backgroundKeyword(l2);
     },
     async loadExams() {
-      let response = await this.$directus.get(
-        `items/exams?filter[l2][eq]=${this.$l2.id}`
+      let response = await this.$directus.content(
+        "exams",
+        `filter[l2][eq]=${this.$l2.id}`
       );
       response = response.data;
       let exams = response.data || [];
@@ -420,13 +421,18 @@ export default {
       return result;
     },
     async loadCourses() {
-      let response = await this.$directus.get(
-        `items/resources?filter[l2][eq]=${this.$l2.id}&filter[type][eq]=courses&filter[featured][eq]=1&fields=*,thumbnail.*`
+      let response = await this.$directus.content(
+        "resources",
+        `filter[l2][eq]=${this.$l2.id}&filter[type][eq]=courses&filter[featured][eq]=1`
       );
       if (response.data?.data) {
         let courses = response.data.data || [];
         let result = {};
         for (let course of courses) {
+          course.thumbnail =
+            typeof course.thumbnail === "string"
+              ? course.thumbnail
+              : undefined;
           for (let level of this.levels) {
             if (course.level && course.level.includes(level.number)) {
               result[level.cefr] = result[level.cefr] || [];
@@ -438,13 +444,18 @@ export default {
       }
     },
     async loadResources() {
-      let response = await this.$directus.get(
-        `items/resources?filter[l2][eq]=${this.$l2.id}&filter[type][neq]=courses&filter[featured][eq]=1&fields=*,thumbnail.*`
+      let response = await this.$directus.content(
+        "resources",
+        `filter[l2][eq]=${this.$l2.id}&filter[type][neq]=courses&filter[featured][eq]=1`
       );
       response = response.data;
       let result = {};
       let resources = response.data || [];
       for (let resource of resources) {
+        resource.thumbnail =
+          typeof resource.thumbnail === "string"
+            ? resource.thumbnail
+            : undefined;
         for (let level of this.levels) {
           if (resource.level && resource.level.includes(level.number)) {
             result[level.cefr] = result[level.cefr] || [];

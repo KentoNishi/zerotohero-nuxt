@@ -169,11 +169,15 @@ export default {
       this.loading = true;
       let filters = "";  // Build your filter string based on `topic` and `type`
       try {
-        let response = await this.$directus.get(
-          `items/resources?filter[l2][eq]=${this.$l2.id}${filters}&fields=*,thumbnail.*`
+        let response = await this.$directus.content(
+          "resources",
+          `filter[l2][eq]=${this.$l2.id}${filters}`
         );
         this.resources = response.data.data.map((resource) => {
-          resource.thumbnail = resource.thumbnail.data.full_url;
+          resource.thumbnail =
+            typeof resource.thumbnail === "string"
+              ? resource.thumbnail
+              : undefined;
           return resource;
         }) || [];
       } catch (error) {

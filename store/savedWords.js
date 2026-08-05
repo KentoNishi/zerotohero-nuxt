@@ -176,8 +176,7 @@ export const actions = {
   },
 
   // Fetch saved words from Flask (Supabase row API — SPEC-034).
-  // The server is the source of truth for logged-in users; this replaces the
-  // old Directus saved_words blob import in plugins/directus.js.
+  // The server is the source of truth for logged-in users.
   async fetchFromFlask({ commit }) {
     if (!$nuxt.$auth.loggedIn) return
     let token = $nuxt.$auth.strategy.token.get()

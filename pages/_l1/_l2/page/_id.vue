@@ -34,7 +34,7 @@ export default {
   },
   async created() {
     try {
-      let res = await this.$directus.get(`items/pages/${this.id}`);
+      let res = await this.$directus.contentGet("pages", this.id);
       if (res && res.data && res.data.data) {
         this.page = res.data.data;
       }

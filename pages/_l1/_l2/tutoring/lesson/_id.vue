@@ -148,10 +148,11 @@ export default {
     };
   },
   async created() {
-    let lesson = await this.$directus.get(`items/tutoring_kit/${this.id}`);
+    let lesson = await this.$directus.contentGet("tutoring_kit", this.id);
     lesson = lesson.data.data;
-    let readings = await this.$directus.get(
-      `items/reading?filter[l2][eq]=${this.$l2.id}&filter[lesson][eq]=${this.id}`
+    let readings = await this.$directus.content(
+      "reading",
+      `filter[l2][eq]=${this.$l2.id}&filter[lesson][eq]=${this.id}`
     );
     readings = readings.data.data;
     // SPEC-039 5.5 — videos served by Flask /search-videos.

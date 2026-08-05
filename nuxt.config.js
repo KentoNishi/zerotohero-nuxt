@@ -1,5 +1,5 @@
 // nuxt.config.js
-import { DIRECTUS_URL, PYTHON_SERVER } from "./lib/utils";
+import { PYTHON_SERVER } from "./lib/utils";
 
 let popularPaths = `/
 /dashboard
@@ -316,7 +316,7 @@ export default {
 
         {
           name: "l1-l2-video-view-type",
-          path: "/:l1/:l2/video-view/:type/:youtube_id?/:directus_id?/:lesson?",
+          path: "/:l1/:l2/video-view/:type/:youtube_id?/:db_id?/:lesson?",
           component: "./pages/_l1/_l2/video-view/_type.vue",
         },
         {
@@ -636,7 +636,7 @@ export default {
         token: {
           property: "token",
           global: true,
-          maxAge: 60 * 60 * 24 * 30, // Set in Directus settings
+          maxAge: 60 * 60 * 24 * 30,
           type: "Bearer",
         },
         refreshToken: {

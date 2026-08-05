@@ -39,7 +39,7 @@
         :is="currentComponent"
         v-bind="{
           youtube_id,
-          directus_id,
+          db_id,
           lesson,
           mini,
           skin: $skin,
@@ -68,7 +68,7 @@ export default {
       type: String,
       required: false,
     },
-    directus_id: {
+    db_id: {
       type: Number,
       required: false,
     },
@@ -127,7 +127,7 @@ export default {
         },
         query: {
           v: this.youtube_id,
-          id: this.directus_id,
+          id: this.db_id,
           lesson: this.lesson,
         },
       };

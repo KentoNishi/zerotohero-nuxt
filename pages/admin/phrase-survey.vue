@@ -326,12 +326,8 @@ export default {
         else if (show.startsWith("talk-"))
           showFilter = `&filter[talk][eq]=${show.replace("talk-", "")}`;
       }
-      let response = await this.$directus.get(
-        `${this.$directus.youtubeVideosTableName(
-          this.$l2.id
-        )}?sort=-id&limit=${limit}&offset=${start}&filter[l2][eq]=${
-          this.$l2.id
-        }${showFilter}&fields=*,tv_show,talk`
+      let response = await this.$directus.adminVideoList(
+        `sort=-id&limit=${limit}&offset=${start}&filter[l2][eq]=${this.$l2.id}${showFilter}`
       );
       let videos = response.data.data || [];
       if (["all-tv-shows", "all-videos"].includes(show)) {

@@ -520,8 +520,7 @@ export default {
       }
     },
     async changeTopic(slug) {
-      let data = await this.$directus.patch({
-        l2Id: this.$l2.id,
+      let data = await this.$directus.patchVideo({
         id: this.video.id,
         payload: { topic: slug },
       });

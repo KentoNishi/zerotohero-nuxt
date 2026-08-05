@@ -256,20 +256,8 @@ export default {
       return true;
     },
     async removeVideo(video) {
-      let response = await $.ajax({
-        url: `${this.$directus.youtubeVideosTableName(this.$l2.id)}/${
-          video.id
-        }`,
-        type: "DELETE",
-        contentType: "application/json",
-        xhr: function () {
-          return window.XMLHttpRequest == null ||
-            new window.XMLHttpRequest().addEventListener == null
-            ? new window.ActiveXObject("Microsoft.XMLHTTP")
-            : $.ajaxSettings.xhr();
-        },
-      });
-      if (response) {
+      let response = await this.$directus.adminVideoDelete(video.id);
+      if (response && response.status === 204) {
         this.videos = this.videos.filter((v) => v.id !== video.id);
         this.updateVideos++;
       }

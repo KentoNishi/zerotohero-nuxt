@@ -80,31 +80,28 @@ export default {
     formatName,
     async confirmDeletion() {
       if (!this.hasActiveSubscription && this.confirmText === 'delete') {
-        // Add logic to delete account
+        // SPEC-039 5.7 — account deletion is handled by Flask → GoTrue.
         try {
-          let res = await this.$directus.get(`users/me`);
-          let user = res?.data?.data;
-          if (user) {
-            if (user.role !== 1) {
-              let url = `users/${user.id}`;
-              await this.$directus.patch(url, { status: "inactive" });
+          const user = this.$auth.user;
+          if (user && !user.isAdmin) {
+            let res = await this.$directus.deleteAccount();
+            if (res && (res.status === 200 || res.status === 204)) {
               this.$toast.success("Your account has been deleted.", {
                 duration: 5000,
               });
               this.$router.push("/logout");
             } else {
-              this.$toast.error("Cannot delete your account because you're an Admin.", {
-                duration: 5000,
-              });
+              this.$toast.error(
+                "Cannot delete your account. Please try again.",
+                { duration: 5000 }
+              );
             }
           } else {
-            this.$toast.error(
-              "Cannot delete your account because your information cannot be retrieved.",
-              { duration: 5000 }
-            );
+            this.$toast.error("Cannot delete your account because you're an Admin.", {
+              duration: 5000,
+            });
           }
         } catch (error) {
-          console.error(error);
           this.$toast.error(
             "Something went wrong during the account deletion process.",
             { duration: 5000 }

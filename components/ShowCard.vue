@@ -138,13 +138,11 @@ export default {
     },
     async toggle(show, property) {
       let toggled = !show[property]; // If true, make it false, and vice versa
-      let path = `items/${this.field}s/${show.id}`;
       let payload = {};
       payload[property] = toggled;
-      let response = await this.$directus.patch(path, payload, {
-        contentType: "application/json",
-      });
-      if (response && response.data.data) {
+      let type = this.field === "tv_show" ? "tv-shows" : "talks";
+      let response = await this.$directus.patchShow(type, show.id, payload);
+      if (response && response.data && response.data.show) {
         Vue.set(show, property, toggled);
       }
     },

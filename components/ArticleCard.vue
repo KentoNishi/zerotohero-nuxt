@@ -14,30 +14,15 @@
           <TokenizedRichText :showMenu="true"><div v-html="article.body" /></TokenizedRichText>
         </div>
       </client-only>
-      <a
-        v-if="edit"
-        :href="`${DIRECTUS_ADMIN_URL}collections/articles/${article.id}`"
-        class="btn btn-default"
-        target="_blank"
-      >
-        Edit
-      </a>
     </div>
   </article>
 </template>
 
 <script>
-import { unescape, stripTags, DIRECTUS_URL } from "../lib/utils";
-
-const DIRECTUS_ADMIN_URL = `${DIRECTUS_URL}admin/#/`
+import { unescape, stripTags } from "../lib/utils";
 
 export default {
   props: ["article", "edit", "social"],
-  data() {
-    return {
-      DIRECTUS_ADMIN_URL
-    };
-  },
   methods: {
     unescape(escapedHTML) {
       return unescape(escapedHTML);

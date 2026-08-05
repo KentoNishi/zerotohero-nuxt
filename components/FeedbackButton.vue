@@ -123,7 +123,7 @@ Previous URL: ${this.previousURL ? this.previousURL : "(Not available)"}`;
         body: this.emailBody,
         type: "plain", // or 'html'
       };
-      await this.$directus.post("mail", payload);
+      await this.$directus.postFeedback(payload);
       this.sending = false;
       this.$toast.success("Feedback sent. Thank you!", {
         duration: 5000,

@@ -126,8 +126,6 @@ export default {
             "subscriptions/checkSubscription",
             this.$auth.user.id
           );
-          // Fetch or create user data
-          await this.$directus.fetchOrCreateUserData(); 
 
           this.$gtag.event(
             "login",

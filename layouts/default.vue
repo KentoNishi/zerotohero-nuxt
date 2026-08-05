@@ -170,7 +170,7 @@ export default {
       this.addFullHistoryItem(this.$route.fullPath);
     },
     "$auth.user"() {
-      this.$directus.fetchOrCreateUserData();
+      this.fetchUserData();
     },
     $l2Settings: {
       deep: true,
@@ -181,6 +181,17 @@ export default {
     },
   },
   methods: {
+    // SPEC-039 5.7/5.8 — user data is fetched from Flask row APIs on login;
+    // the Directus user_data blob is gone.
+    fetchUserData() {
+      if (!this.$auth.loggedIn) return;
+      this.$store.dispatch("savedWords/fetchFromFlask");
+      this.$store.dispatch("savedPhrases/fetchFromFlask");
+      this.$store.dispatch("progress/fetchFromFlask");
+      this.$store.dispatch("settings/fetchFromFlask");
+      this.$store.dispatch("history/fetchFromFlask");
+      this.$store.dispatch("bookshelf/fetchFromFlask");
+    },
     // Fetch the user's data from the server, such as their subscription status,
     async getUserDataAndSubscription() {
       if (!this.historyLoaded) {
@@ -189,19 +200,8 @@ export default {
       if (!this.fullHistoryLoaded) {
         this.$store.dispatch("fullHistory/load");
       }
-      await this.$directus.fetchOrCreateUserData(); // Make sure user data is fetched from the server
+      this.fetchUserData(); // Make sure user data is fetched from the server
       if (this.$auth.loggedIn) {
-        let user = await this.$directus.getCurrentUser();
-        
-        // If the user cannot be fetched, or if the status is 'inactive' or 'draft', redirect to the email verification page
-        if (!user || ['inactive', 'draft'].includes(user.status)) {
-          this.$router.push({
-            name: "verify-email",
-            query: {
-              email: encodeURIComponent(this.$auth.user.email),
-            },
-          });
-        }
         await this.$store.dispatch(
           "subscriptions/checkSubscription",
           this.$auth.user.id

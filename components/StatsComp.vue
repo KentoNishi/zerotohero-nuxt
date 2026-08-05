@@ -132,7 +132,7 @@
 </template>
 
 <script>
-import { proxy, LP_DIRECTUS_TOOLS_URL, DEFAULT_PAGE } from "../lib/utils";
+import { DEFAULT_PAGE } from "../lib/utils";
 
 export default {
   props: {
@@ -192,12 +192,9 @@ export default {
     },
     async getStats(refresh = false) {
       this.gettingStats = true;
-      let data = await proxy(
-        `${LP_DIRECTUS_TOOLS_URL}count-all.php${
-          refresh ? "?timestamp=" + Date.now() : ""
-        }`,
-        { cacheLife: refresh ? 0 : 86400 } // cache the count for one day (86400 seconds)
-      );
+      // SPEC-039 5.8 — counts come from Supabase via Flask /stats/video-counts.
+      let res = await this.$directus.statsVideoCounts();
+      let data = res && res.data;
       if (refresh && this.stats) this.previousStats = this.stats;
       if (refresh && this.languageData) this.previousLanguageData = this.languageData;
       if (data?.langCounts) {

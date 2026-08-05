@@ -239,6 +239,7 @@
 import { SERVER, DEFAULT_PAGE, unique, formatK } from "../../../lib/utils";
 import Papa from "papaparse";
 import Vue from "vue";
+import axios from "axios";
 
 export default {
   data() {
@@ -288,9 +289,7 @@ export default {
     },
   },
   async mounted() {
-    let res = await this.$directus.get(
-      `${SERVER}data/analytics/analytics-2021-09-05.csv`
-    );
+    let res = await axios.get(`${SERVER}data/analytics/analytics-2021-09-05.csv`);
     if (res && res.data) {
       let parsed = Papa.parse(res.data, { header: true });
       let rows = parsed.data;
@@ -334,44 +333,30 @@ export default {
       }
     },
     async loadDataForRowKey(row, key, forceRefresh) {
-      let config = {};
-      if (["Music", "Movies", "News"].includes(key)) {
-        let collection = "News" === key ? "talk" : "tv_show";
-        let videos = this.$directus.getVideos({l2Id: row.l2.id, query: `filter[${collection}.title][eq]=${key}&limit=1&meta=filter_count` })
-        if (videos) {
-          if (videos[0])
-            Vue.set(row, `${key}Id`, res.data.data[0][collection]);
-          Vue.set(row, key, res.data.meta.filter_count);
+      // SPEC-039 5.8 — all per-language counts come from Flask /stats/content-counts.
+      if (row._countsLoaded) return;
+      let res = await this.$directus.statsContentCounts(row.l2.code);
+      if (res && res.data && res.data.data) {
+        let counts = res.data.data;
+        for (let k of [
+          "youtube_videos",
+          "tv_shows",
+          "talks",
+          "phrasebook",
+          "Music",
+          "Movies",
+          "News",
+        ]) {
+          Vue.set(row, k, counts[k]);
         }
-      } else {
-        let res = await this.$directus.get(
-          `items/${key}?filter[l2][eq]=${row.l2.id}&filter[title][nin]=Movies,Music,News&limit=1&meta=filter_count`,
-          config
-        );
-        if (res && res.data) {
-          Vue.set(row, key, res.data.meta.filter_count);
-        }
+        row._countsLoaded = true;
       }
     },
     async loadData() {
       if (this.filteredRows) {
         let visibleRows = this.filteredRows.slice(0, this.numRowsVisible);
         for (let row of visibleRows) {
-          for (let key of [
-            "youtube_videos",
-            "tv_shows",
-            "talks",
-            "phrasebook",
-          ]) {
-            if (!row[key]) {
-              this.loadDataForRowKey(row, key);
-            }
-          }
-          for (let key of ["Music", "Movies", "News"]) {
-            if (!row[key]) {
-              this.loadDataForRowKey(row, key);
-            }
-          }
+          this.loadDataForRowKey(row, "youtube_videos");
         }
       }
     },

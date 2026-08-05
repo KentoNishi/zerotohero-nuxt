@@ -3,7 +3,7 @@
 ## [2.19.7] - 2023-06-14
 ### Fixed
 - Corrected the URL scheme in the manage subscriptions module.
-- Reverted back to directusvps after server issue was fixed.
+- Reverted back to the primary database server after an outage.
 ### Added
 - Admin interface for updating user subscriptions.
 - Option to "look up as phrase" in annotate menu.

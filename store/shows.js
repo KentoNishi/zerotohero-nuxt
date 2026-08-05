@@ -332,13 +332,13 @@ export const actions = {
     commit("ADD_RECOMMENDED_MUSIC_VIDEOS", { l2, videos });
   },
   async add(context, { l2, type, show }) {
-    let response = await this.$directus.post(
-      `items/${type === "tvShows" ? "tv_shows" : "talks"}`,
+    let response = await this.$directus.createShow(
+      type === "tvShows" ? "tv-shows" : "talks",
       show
     );
     if (response && response.data) {
-      context.commit("ADD_SHOW", { l2, type, show: response.data.data });
-      let show = Object.assign(response.data.data, {
+      context.commit("ADD_SHOW", { l2, type, show: response.data.show });
+      let show = Object.assign(response.data.show, {
         l2,
         type: type === "tvShows" ? "tv_show" : "talk",
       });
@@ -348,8 +348,9 @@ export const actions = {
     }
   },
   async remove(context, { l2, type, show }) {
-    let response = await this.$directus.delete(
-      `items/${type === "tvShows" ? "tv_shows" : "talks"}/${show.id}`
+    let response = await this.$directus.deleteShow(
+      type === "tvShows" ? "tv-shows" : "talks",
+      show.id
     );
     if (response?.status === 204) {
       context.commit("REMOVE_SHOW", { l2, type, show });
@@ -357,8 +358,9 @@ export const actions = {
     return true;
   },
   async update(context, { l2, type, id, payload }) {
-    let response = await this.$directus.patch(
-      `items/${type === "tvShows" ? "tv_shows" : "talks"}/${id}`,
+    let response = await this.$directus.patchShow(
+      type === "tvShows" ? "tv-shows" : "talks",
+      id,
       payload
     );
     if (response) {

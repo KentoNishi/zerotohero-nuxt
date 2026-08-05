@@ -121,7 +121,7 @@ export default {
     },
     async surveyPhrases() {
       this.gettingPhrases = true;
-      let res = await this.$directus.get(`items/phrasebook`);
+      let res = await this.$directus.content("phrasebooks", "limit=500");
       if (res && res.data) {
         let phrasebooks = res.data.data;
         for (let phrasebook of phrasebooks) {

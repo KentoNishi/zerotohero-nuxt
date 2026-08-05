@@ -149,14 +149,8 @@ export default {
   methods: {
     async getVideos() {
       let limit = this.perPage;
-      let response = await this.$directus.get(
-        `${this.$directus.youtubeVideosTableName(
-          this.$l2.id
-        )}?sort=-id&limit=${limit}&offset=${
-          this.start
-        }&fields=id,youtube_id,l2,title,subs_l2,channel_id,topic,level,lesson,tv_show,talk&timestamp=${
-          this.$adminMode ? Date.now() : 0
-        }`
+      let response = await this.$directus.adminVideoList(
+        `sort=-id&limit=${limit}&offset=${this.start}`
       );
       let videos = response.data.data || [];
       this.warnVideos(videos);
@@ -174,15 +168,13 @@ export default {
     },
     async remove(video) {
       try {
-        let response = await this.$directus.delete(
-          `${this.$directus.youtubeVideosTableName(this.$l2.id)}/${video.id}`
-        );
-        if (response.data) {
+        let response = await this.$directus.adminVideoDelete(video.id);
+        if (response && response.status === 204) {
           this.videos = this.videos.filter((v) => v !== video);
           warnVideos(this.videos);
         }
       } catch (err) {
-        // Directus bug
+        // Silently ignore delete errors (legacy behavior).
       }
     },
     warnVideos(videos) {
@@ -215,16 +207,13 @@ export default {
         })
       );
       try {
-        let response = await this.$directus.patch(
-          `${this.$directus.youtubeVideosTableName(this.$l2.id)}/${video.id}`,
-          {
-            subs_l2: csv,
-          }
-        );
-        if (response && response.data) {
-          video.id = response.data.data.id;
-          video.subs_l2 = response.data.data.subs_l2;
-          // video.subs_l2 = response.data.subs_l2
+        let data = await this.$directus.patchVideo({
+          id: video.id,
+          payload: { subs_l2: csv },
+        });
+        if (data) {
+          video.id = data.id;
+          video.subs_l2 = data.subs_l2;
           console.log(
             `Converted to CSV. ${json.length / 1000}k -> ${
               csv.length / 1000
@@ -235,7 +224,7 @@ export default {
           );
         }
       } catch (err) {
-        // Directus bug
+        // Silently ignore patch errors (legacy behavior).
       }
     },
     type(string) {

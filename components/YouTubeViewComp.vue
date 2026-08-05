@@ -88,7 +88,7 @@ export default {
   props: {
     skin: { default: "dark" },
     youtube_id: { type: String, required: true },
-    directus_id: { type: Number, required: false },
+    db_id: { type: Number, required: false },
     lesson: { type: String, required: false },
     mini: { type: Boolean, default: false, required: false },
     initialMode: { default: "subtitles" },
@@ -254,7 +254,7 @@ export default {
     console.log(`📺 Mounting YouTubeView for video ID: ${this.youtube_id}`);
 
     await Promise.all([
-      this.loadVideo(this.youtube_id, this.directus_id),
+      this.loadVideo(this.youtube_id, this.db_id),
       this.handlePlaylistFromQueryString(),
     ]);
 

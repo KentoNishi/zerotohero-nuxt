@@ -119,7 +119,8 @@ export const loadSettingsFromStorage = () => {
 // Vuex mutations...
 
 export const mutations = {
-  // default.vue calls $directus to fetch user's data, including the settings, then loaded it into the store, and save to localStorage
+  // default.vue fetches the user's data (including settings) from Flask row
+  // APIs on login, then saves to localStorage.
   SAVE_JSON_FROM_SERVER_TO_LOCAL(state, json) {
     if (typeof localStorage !== "undefined") {
       let importedData;
@@ -293,7 +294,7 @@ export const actions = {
       logError(err, "settings.js: fetchFromFlask()");
     }
   },
-  // Settings are fetched from $directus.fetchOrCreateUserData from default.vue
+  // Settings are fetched from Flask's row API on login (default.vue).
   async syncSettingsToServer({ state }) {
     if (!$nuxt.$auth.loggedIn) return;
     let token = $nuxt.$auth.strategy.token.get();

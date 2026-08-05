@@ -22,9 +22,9 @@ export const state = () => {
   }
 }
 export const mutations = {
-  // Load the user's history from Directus and store it in the Vuex state.
+  // Load the user's history from the Flask watch-history API.
   LOAD_WATCH_HISTORY(state, { l2Id, watchHistoryItems }) {
-    // Load the user's history from the Directus server
+    // Load the user's history from the Flask watch-history API
     state.watchHistory = watchHistoryItems
     state.watchHistoryLoadedForL2Id = l2Id
     state.l2Id = l2Id

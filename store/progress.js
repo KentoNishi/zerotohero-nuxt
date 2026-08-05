@@ -93,7 +93,7 @@ export const mutations = {
 export const actions = {
   load({ commit }) {
     if (!state.progressLoaded) commit('LOAD')
-    // Data from the server is loaded via directus.js's fetchOrCreateUserData()
+    // Data from the server is loaded from Flask's row API on login.
   },
   async fetchFromFlask({ commit }) {
     if (!$nuxt.$auth.loggedIn) return
