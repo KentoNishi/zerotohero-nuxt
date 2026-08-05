@@ -30,8 +30,10 @@ export const actions = {
         return;
       }
       // SPEC-039 5.6 — subscriptions now live in Supabase via Flask.
+      const token = $nuxt.$auth.strategy.token.get() || '';
       const res = await axios.get(
-        `${PYTHON_SERVER}user-subscription?user_id=${encodeURIComponent(userId)}`
+        `${PYTHON_SERVER}user-subscription`,
+        { headers: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, '')}` } }
       );
       const data = res.data || {};
       const subscription = data.subscription !== undefined ? data.subscription : data;

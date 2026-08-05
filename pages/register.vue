@@ -97,7 +97,7 @@
 </template>
 
 <script>
-import { background, logError, PYTHON_SERVER, DIRECTUS_URL } from "../lib/utils";
+import { background, logError, PYTHON_SERVER } from "../lib/utils";
 
 export default {
   data() {
@@ -127,15 +127,18 @@ export default {
       try {
         this.loading = true;
 
-        // Register the user in Directus
+        // Register through Flask → GoTrue (SPEC-039 5.7).
         const res = await axios.post(
-          `${DIRECTUS_URL}zerotohero/users`,
-          { 
-            ...this.form,
+          `${PYTHON_SERVER}auth/register`,
+          {
+            email: this.form.email,
+            password: this.form.password,
+            firstName: this.form.first_name,
+            lastName: this.form.last_name,
           }
         );
 
-        if (res && res.data && res.data.public === true) {
+        if (res && res.data && res.data.user) {
           // Redirect to Verification Instruction Screen
           this.$router.push({
             name: "verify-email",

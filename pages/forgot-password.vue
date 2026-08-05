@@ -66,7 +66,7 @@
 </template>
 
 <script>
-import { background, timeout } from "../lib/utils";
+import { background, timeout, PYTHON_SERVER } from "../lib/utils";
 
 export default {
   props: {
@@ -92,10 +92,8 @@ export default {
       try {
         this.emailSending = true;
         let email = this.form.email;
-        let sent = await this.$directus.sendPasswordResetEmail({ email });
-        if (sent) {
-          this.emailSent = true;
-        }
+        let res = await this.$axios.post(`${PYTHON_SERVER}auth/password-request`, { email });
+        this.emailSent = true;
       } catch (err) {
         if (err.response?.data?.error?.message) {
           if (err.response.data.error.code === 103) {

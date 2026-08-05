@@ -110,8 +110,11 @@ export default {
       try {
         this.loading = true;
         let res = await this.$auth.loginWith("local", { data: this.form });
-        if (res && res.data && res.data.data && res.data.data.user) {
-          let user = res.data.data.user;
+        let user =
+          res && res.data && res.data.user
+            ? res.data.user
+            : res && res.data && res.data.data && res.data.data.user;
+        if (user) {
           this.$auth.setUser(user);
           await this.$store.dispatch(
             "subscriptions/checkSubscription",

@@ -157,7 +157,7 @@
 
 <script>
 import { mapState } from "vuex";
-import { languageLevels, timeout, formatName } from "@/lib/utils";
+import { languageLevels, timeout, formatName, PYTHON_SERVER } from "@/lib/utils";
 import ChannelList from "@/components/ChannelList.vue";
 
 export default {
@@ -237,27 +237,14 @@ export default {
       if (
         confirm(`Are you sure you want to permanently delete your account?`)
       ) {
-        let res = await this.$directus.get(`users/me`);
-        let user = res?.data?.data;
-        if (user) {
-          if (user.role !== 1) {
-            let url = `users/${user.id}`;
-            res = await this.$directus.patch(url, { status: "inactive" });
-            this.$toast.success("Success: User account has been deleted.", {
-              duration: 5000,
-            });
-            this.$router.push("/logout");
-          } else {
-            this.$toast.error("Error: Cannot delete admin users.", {
-              duration: 5000,
-            });
-          }
-        } else {
-          this.$toast.error(
-            "Error: Cannot delete user because user information canot be retrieved.",
-            { duration: 5000 }
-          );
-        }
+        const token = this.$auth.strategy.token.get() || "";
+        await this.$axios.delete(`${PYTHON_SERVER}auth/delete-account`, {
+          headers: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}` },
+        });
+        this.$toast.success("Success: User account has been deleted.", {
+          duration: 5000,
+        });
+        this.$router.push("/logout");
       }
     },
   },

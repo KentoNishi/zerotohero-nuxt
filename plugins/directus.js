@@ -596,8 +596,10 @@ export default ({ app }, inject) => {
       if (!userId) return false;
       try {
         // SPEC-039 5.6 — subscriptions served by Flask /user-subscription.
+        const token = app.$auth.strategy.token.get() || '';
         let res = await axios.get(
-          `${PYTHON_SERVER}user-subscription?user_id=${encodeURIComponent(userId)}`
+          `${PYTHON_SERVER}user-subscription`,
+          { headers: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, '')}` } }
         );
         const data = res?.data;
         const subscription = data && data.subscription !== undefined

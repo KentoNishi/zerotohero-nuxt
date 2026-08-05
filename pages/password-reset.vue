@@ -59,7 +59,7 @@
 </template>
 
 <script>
-import { timeout, background, logError } from "../lib/utils";
+import { timeout, background, logError, PYTHON_SERVER } from "../lib/utils";
 
 export default {
   data() {
@@ -87,7 +87,11 @@ export default {
         this.resetting = true;
         let token = this.token;
         let password = this.form.password;
-        let reset = this.$directus.resetPassword({ token, password })
+        let reset = await this.$axios.post(`${PYTHON_SERVER}auth/password-reset`, {
+          token,
+          password,
+          email: this.$route.query?.email,
+        })
         if (reset) {
           this.$toast.success(this.$tb("Your password has been updated, please login."), {
             position: "top-center",

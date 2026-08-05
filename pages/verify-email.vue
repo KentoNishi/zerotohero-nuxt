@@ -124,9 +124,12 @@ export default {
     async onSubmit(event) {
       try {
         this.verifying = true;
-        let res = await this.$axios.post(`${PYTHON_SERVER}/verification_email/verify`, this.form);
+        let res = await this.$axios.post(`${PYTHON_SERVER}auth/verify-email`, {
+          token: this.form.code,
+          email: this.form.email,
+        });
 
-        if (res.data.status = 'success') {
+        if (res.data.success || res.data.status === 'success') {
           this.$toast.success(this.$tb('Email verified. You can now log in.'), { duration: 5000 });
           this.$gtag.event('user_register')
           // Log out the user
@@ -147,7 +150,7 @@ export default {
     async sendCode() {
       this.sending = true;
       try {
-        await this.$axios.post(`${PYTHON_SERVER}/verification_email`, {
+        await this.$axios.post(`${PYTHON_SERVER}auth/resend-verification`, {
           email: this.form.email,
         });
         this.$toast.success(this.$tb('Verification code sent.'), { duration: 5000 });

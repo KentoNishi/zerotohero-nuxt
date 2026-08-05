@@ -1,5 +1,5 @@
 // nuxt.config.js
-import { DIRECTUS_URL } from "./lib/utils";
+import { DIRECTUS_URL, PYTHON_SERVER } from "./lib/utils";
 
 let popularPaths = `/
 /dashboard
@@ -634,32 +634,30 @@ export default {
       local: {
         scheme: "refresh",
         token: {
-          property: "data.token",
+          property: "token",
           global: true,
           maxAge: 60 * 60 * 24 * 30, // Set in Directus settings
-          // required: true,
-          // type: 'Bearer'
+          type: "Bearer",
         },
         refreshToken: {
-          property: "data.token",
-          data: "token",
+          property: "refreshToken",
           maxAge: 60 * 60 * 24 * 30,
         },
         user: {
-          property: "data.user",
+          property: "user",
           autoFetch: false,
         },
         endpoints: {
           login: {
-            url: `${DIRECTUS_URL}zerotohero/auth/authenticate`,
+            url: `${PYTHON_SERVER}auth/login`,
             method: "post",
           },
           refresh: {
-            url: `${DIRECTUS_URL}zerotohero/auth/refresh`,
+            url: `${PYTHON_SERVER}auth/refresh`,
             method: "post",
           },
           logout: {
-            url: `${DIRECTUS_URL}zerotohero/auth/logout`,
+            url: `${PYTHON_SERVER}auth/logout`,
             method: "post",
           },
           user: false,
