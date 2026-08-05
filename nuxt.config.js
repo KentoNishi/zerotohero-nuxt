@@ -628,6 +628,9 @@ export default {
   },
 
   auth: {
+    // Runs after $auth.init() resolves (config plugins run before the auth
+    // module's plugin, so this must live here, not in the top-level plugins).
+    plugins: ["~/plugins/auth-user.js"],
     redirect: {
       login: false,
       logout: false,
@@ -704,7 +707,6 @@ export default {
 
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
   plugins: [
-    { src: "~/plugins/auth-user.js" },
     { src: "~/plugins/directus.js" },
     { src: "~/plugins/global-mixin" },
     { src: "~/plugins/idle-vue.js", mode: "client" },

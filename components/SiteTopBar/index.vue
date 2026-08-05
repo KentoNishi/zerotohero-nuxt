@@ -46,7 +46,7 @@
               🚀 {{ $tb("Go Pro") }}
             </router-link> -->
             <router-link
-              v-if="$auth && $auth.loggedIn && $auth.user && $auth.user.first_name"
+              v-if="$auth && $auth.loggedIn && $auth.user"
               to="/logout"
               class="mr-1"
             >

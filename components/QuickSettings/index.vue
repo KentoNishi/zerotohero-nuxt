@@ -211,9 +211,7 @@
         </div>
         <div :class="`annotation-setting-toggle`">
           <router-link
-            v-if="
-              $auth && $auth.loggedIn && $auth.user && $auth.user.first_name
-            "
+            v-if="$auth && $auth.loggedIn && $auth.user"
             to="/logout"
             class="text-success"
           >
