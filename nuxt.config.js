@@ -704,6 +704,7 @@ export default {
 
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
   plugins: [
+    { src: "~/plugins/auth-user.js" },
     { src: "~/plugins/directus.js" },
     { src: "~/plugins/global-mixin" },
     { src: "~/plugins/idle-vue.js", mode: "client" },
