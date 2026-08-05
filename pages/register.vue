@@ -153,9 +153,13 @@ export default {
 
         // Handle errors and display appropriate error messages
         if (err.response && err.response.data) {
-          let message = err.response.data.error.message;
+          const data = err.response.data;
+          // Flask returns { errors: [{ code, message }] }; old Directus used
+          // { error: { code, message } }. Accept both.
+          const firstError = (data.errors && data.errors[0]) || data.error || {};
+          let message = firstError.message || "There has been an error.";
 
-          if (err.response.data.error.code === 204) {
+          if (firstError.code === "email_already_registered" || firstError.code === 204) {
             message = this.$tb(
               "Your email {email} has already been registered, please login.",
               { email: this.form.email }
