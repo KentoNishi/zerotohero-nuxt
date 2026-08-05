@@ -16,7 +16,11 @@
     <div>
       <b-button
         class="youtube-video-card-badge border-0"
-        v-if="text.id && $auth.loggedIn && Number($auth.user.id) === text.owner"
+        v-if="
+          text.id &&
+          $auth.loggedIn &&
+          String(text.owner) === String($auth.user.id)
+        "
         size="sm"
         variant="no-bg"
         @click.stop="$bvModal.show('actionsModal' + text.id)"

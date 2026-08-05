@@ -52,7 +52,9 @@ export default {
       },
     }),
     userIsOwner() {
-      return this.playlist?.owner === Number(this.$auth.user?.id);
+      // Playlists are always fetched user-scoped from Flask, so ownership is
+      // implied by being logged in (owner is no longer a numeric id).
+      return !!(this.$auth && this.$auth.loggedIn);
     },
   },
   asyncComputed: {
