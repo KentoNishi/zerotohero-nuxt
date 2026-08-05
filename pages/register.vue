@@ -143,7 +143,9 @@ export default {
           this.$router.push({
             name: "verify-email",
             query: {
-              email: encodeURIComponent(this.form.email),
+              // vue-router encodes query values itself; double-encoding here
+              // produced URLs like ?email=test%2540example.com.
+              email: this.form.email,
             },
           });
         }

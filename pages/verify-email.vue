@@ -86,17 +86,25 @@ export default {
       sending: false,
     };
   },
-  async mounted() {
-    let email = decodeURIComponent(this.$route.query.email);
+  mounted() {
+    // The signup itself already triggered the confirmation email through GoTrue
+    // (SPEC-039 5.7). Do NOT auto-resend on page load: GoTrue rate-limits
+    // resends to the same user (60s "minimum interval per user"), so an
+    // immediate resend fails with 429. Only send when the user explicitly
+    // clicks "Resend Code".
+    let email = this.$route.query.email;
     let code = this.$route.query.code;
     if (email) {
-      this.form.email = email;
+      try {
+        // vue-router already decodes the query; this also tolerates legacy
+        // double-encoded URLs without mangling plain addresses.
+        this.form.email = decodeURIComponent(email);
+      } catch (e) {
+        this.form.email = email;
+      }
     }
     if (code) {
       this.form.code = code;
-    } else {
-      // Send a verification email
-      this.sendCode();
     }
     this.show = true;
   },

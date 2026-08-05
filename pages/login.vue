@@ -19,6 +19,9 @@
               <div v-if="message" class="alert alert-danger mt-2">
                 {{ $tb(message) }}
               </div>
+              <div v-else-if="verified" class="alert alert-success mt-2">
+                {{ $tb('Email verified. You can now log in.') }}
+              </div>
               <b-form-group id="input-group-1" label-for="email">
                 <b-form-input
                   id="email"
@@ -86,6 +89,9 @@ export default {
   computed: {
     backgroundImage() {
       return background(this.$l2);
+    },
+    verified() {
+      return this.$route.query.verified === '1';
     },
   },
   mounted() {

@@ -57,11 +57,38 @@ export default async ({ app, store, route }, inject) => {
       id: 'UA-1846573-21', // Move to 'G-CXDV1NLTC2' after UA shutoff
     } 
   }, app.router)
+  // Supabase Auth email links (SPEC-039 5.7) redirect to this origin with the
+  // session in a URL fragment: /#access_token=...&sb= (or #error=... when the
+  // link is invalid/expired). The Classic app authenticates through Flask, so
+  // there is nothing to do with those tokens here — clean the URL and send the
+  // user to /login (verified=1 shows a success alert). Without this, the
+  // tokens could end up as a path (/access_token=...), which Nuxt SSR turns
+  // into a 500.
+  if (process.client) {
+    const hashParams = new URLSearchParams(window.location.hash.slice(1))
+    const hasAuthFragment = ['access_token', 'refresh_token', 'error', 'error_code', 'error_description'].some((key) => hashParams.has(key))
+    if (hasAuthFragment) {
+      const verified = hashParams.get('access_token') ? '1' : '0'
+      window.history.replaceState({}, '', window.location.pathname + window.location.search)
+      // Let the plugin finish injecting before navigating away.
+      window.location.replace('/login?verified=' + verified)
+    }
+    // Some clients/webviews mangle the fragment into the path instead of the
+    // hash (e.g. /access_token=...). Repair that too, so it never 500s.
+    if (/^\/(access_token|error|error_code)=/.test(window.location.pathname)) {
+      const verified = window.location.pathname.startsWith('/access_token=') ? '1' : '0'
+      window.history.replaceState({}, '', '/')
+      window.location.replace('/login?verified=' + verified)
+    }
+  }
   // Make legacy hash URLs work
   // https://qvault.io/javascript/vue-history-mode-support-legacy-hash-urls/
   app.router.beforeEach((to, from, next) => {
-    // Redirect if fullPath begins with a hash (ignore hashes later in path)
-    if (to && to.fullPath.substr(0, 2) === '/#') {
+    // Redirect only legacy hash-ROUTE URLs (/ # /path) — vue-router includes
+    // the hash in fullPath, so Supabase auth fragments arrive as
+    // /#access_token=... and must NOT be rewritten into a path (that produced
+    // /access_token=... → SSR 500). Those are handled above instead.
+    if (to && to.fullPath.substr(0, 3) === '/#/') {
       const path = to.fullPath.substr(2);
       // next(path);
       window.location.href = path
