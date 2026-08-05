@@ -592,19 +592,25 @@ export default ({ app }, inject) => {
     },
 
     async checkSubscription() {
-      let res = await this.get(
-        `items/subscriptions?filter[owner][eq]=${
-          app.$auth.user.id
-        }&timestamp=${Date.now()}`
-      );
-      if (res && res.data && res.data.data) {
-        if (res.data.data[0]) {
-          let subscription = res.data.data[0];
+      const userId = app.$auth?.user?.id;
+      if (!userId) return false;
+      try {
+        // SPEC-039 5.6 — subscriptions served by Flask /user-subscription.
+        let res = await axios.get(
+          `${PYTHON_SERVER}user-subscription?user_id=${encodeURIComponent(userId)}`
+        );
+        const data = res?.data;
+        const subscription = data && data.subscription !== undefined
+          ? data.subscription
+          : data;
+        if (subscription) {
           app.$auth.$storage.setUniversal("subscription", subscription);
           return subscription;
-        } else {
-          return false;
         }
+        return false;
+      } catch (err) {
+        logError(err, "directus.js: checkSubscription()");
+        return false;
       }
     },
 

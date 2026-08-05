@@ -1,4 +1,5 @@
-import { PYTHON_SERVER } from "@/lib/utils";
+import axios from "axios";
+import { logError, PYTHON_SERVER } from "@/lib/utils";
 
 export const state = () => ({
   active: false,
@@ -23,7 +24,17 @@ export const actions = {
     commit("SET_CHECKING", true);
     try {
       let active = false;
-      const subscription = await this.$directus.checkSubscription()
+      if (!userId) {
+        commit("SET_ACTIVE", false);
+        commit("SET_CHECKING", false);
+        return;
+      }
+      // SPEC-039 5.6 — subscriptions now live in Supabase via Flask.
+      const res = await axios.get(
+        `${PYTHON_SERVER}user-subscription?user_id=${encodeURIComponent(userId)}`
+      );
+      const data = res.data || {};
+      const subscription = data.subscription !== undefined ? data.subscription : data;
       if (subscription) {
         if (subscription.type === 'lifetime') active = true;
         else {
@@ -36,7 +47,7 @@ export const actions = {
       commit("SET_ACTIVE", active);
       commit("SET_CHECKING", false);
     } catch (error) {
-      console.error("Error checking subscription:", error.message);
+      logError(error, "subscriptions.js: checkSubscription()");
       commit("SET_ACTIVE", false);
       commit("SET_CHECKING", false);
     }
@@ -54,7 +65,7 @@ export const actions = {
       this.dispatch("subscriptions/checkSubscription");
       return res;
     } catch (error) {
-      console.error("Error cancelling subscription:", error.message);
+      logError(error, "subscriptions.js: cancelSubscriptionAtEndOfPeriod()");
     }
   }
 };
