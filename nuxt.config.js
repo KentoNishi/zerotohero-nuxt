@@ -174,6 +174,8 @@ export default {
     COMMIT_REF,
     BRANCH,
     TAG,
+    classicRegistrationDisabled:
+      process.env.DISABLE_CLASSIC_REGISTRATION === "true",
   },
   // server: {
   //   host: '0.0.0.0' // default: 'localhost'

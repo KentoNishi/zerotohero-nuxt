@@ -15,7 +15,7 @@
             <div class="text-center mb-4">
               <Logo skin="light" />
             </div>
-            <b-form @submit.prevent="onSubmit" v-if="show">
+            <b-form @submit.prevent="onSubmit" v-if="show && !registrationDisabled">
               <div class="d-flex mb-3" style="gap: 0.5rem">
                 <b-form-input
                   id="first_name"
@@ -75,6 +75,20 @@
                 </router-link>
               </div>
             </b-form>
+            <div v-else-if="registrationDisabled" class="text-center">
+              <p class="text-white mb-3">
+                {{ $tb("I have an account, log me in.") }}
+              </p>
+              <router-link
+                :to="{
+                  name: 'login',
+                  query: { redirect: $route.query.redirect },
+                }"
+                class="btn btn-success"
+              >
+                {{ $tb("Login") }}
+              </router-link>
+            </div>
           </div>
         </div>
       </div>
@@ -103,6 +117,9 @@ export default {
   computed: {
     backgroundImage() {
       return background(this.$l2);
+    },
+    registrationDisabled() {
+      return process.env.classicRegistrationDisabled === true;
     },
   },
   methods: {
