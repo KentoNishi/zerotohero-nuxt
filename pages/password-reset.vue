@@ -19,7 +19,7 @@
             <b-form @submit.prevent="onSubmit" v-if="token" class="skin-light">
               <div class="alert alert-success">
                 <i class="fas fa-check mr-1"></i>
-                {{ $tb('Email verified.') }}
+                {{ $tb('Password recovery link verified. Enter your new password below.') }}
               </div>
               <p class="mb-3">{{ $tb('Enter your new password:') }}</p>
 

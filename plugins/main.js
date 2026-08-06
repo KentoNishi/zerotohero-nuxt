@@ -68,17 +68,35 @@ export default async ({ app, store, route }, inject) => {
     const hashParams = new URLSearchParams(window.location.hash.slice(1))
     const hasAuthFragment = ['access_token', 'refresh_token', 'error', 'error_code', 'error_description'].some((key) => hashParams.has(key))
     if (hasAuthFragment) {
-      const verified = hashParams.get('access_token') ? '1' : '0'
-      window.history.replaceState({}, '', window.location.pathname + window.location.search)
-      // Let the plugin finish injecting before navigating away.
-      window.location.replace('/login?verified=' + verified)
+      const accessToken = hashParams.get('access_token')
+      const type = hashParams.get('type')
+      // A password-recovery link (type=recovery) must land on the
+      // password-reset page with the recovery JWT, not the "email verified"
+      // login path — otherwise the user can never set a new password.
+      if (type === 'recovery' && accessToken) {
+        window.history.replaceState({}, '', window.location.pathname + window.location.search)
+        window.location.replace('/password-reset?token=' + encodeURIComponent(accessToken))
+      } else {
+        const verified = accessToken ? '1' : '0'
+        window.history.replaceState({}, '', window.location.pathname + window.location.search)
+        // Let the plugin finish injecting before navigating away.
+        window.location.replace('/login?verified=' + verified)
+      }
     }
     // Some clients/webviews mangle the fragment into the path instead of the
     // hash (e.g. /access_token=...). Repair that too, so it never 500s.
     if (/^\/(access_token|error|error_code)=/.test(window.location.pathname)) {
-      const verified = window.location.pathname.startsWith('/access_token=') ? '1' : '0'
+      const isRecovery = window.location.pathname.includes('type=recovery')
+      const accessToken = window.location.pathname.startsWith('/access_token=')
+        ? window.location.pathname.split('access_token=')[1].split('&')[0]
+        : null
       window.history.replaceState({}, '', '/')
-      window.location.replace('/login?verified=' + verified)
+      if (isRecovery && accessToken) {
+        window.location.replace('/password-reset?token=' + encodeURIComponent(accessToken))
+      } else {
+        const verified = accessToken ? '1' : '0'
+        window.location.replace('/login?verified=' + verified)
+      }
     }
   }
   // Make legacy hash URLs work
