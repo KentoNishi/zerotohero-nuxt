@@ -62,8 +62,7 @@ export default {
       paypalEnv: process.env.PAYPAL_ENV || 'production',
       paypalCredentials: {
         sandbox: process.env.PAYPAL_SANDBOX_CLIENT_ID || '',
-        production: process.env.PAYPAL_CLIENT_ID ||
-          'AcLhxqFEKaIXIRDdaHlKM6h2kUwtgnBdYtaBozJkFy1-hlCpIYytxePBmluj0xr9bYVUIGw6AFb17IgV',
+        production: process.env.PAYPAL_CLIENT_ID || '',
       },
       paypalItems: [
         {
