@@ -12,12 +12,16 @@
  * JWT staleness is detected via $auth.check(true), which compares the stored
  * token expirations (derived from the JWT exp at login).
  */
+import { wipeLocalUserData } from "../lib/logout-wipe";
+
 export default function ({ app }) {
   if (!process.client) return;
   const auth = app.$auth;
   if (!auth) return;
 
   const clearDeadSession = async () => {
+    // SPEC-062 — a dead session is still a logout: wipe local user data.
+    wipeLocalUserData();
     try {
       await auth.logout();
     } catch (e) {

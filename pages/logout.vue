@@ -24,6 +24,7 @@
 
 <script>
 import { background } from "../lib/utils";
+import { wipeLocalUserData } from "../lib/logout-wipe";
 export default {
   data() {
     return {
@@ -44,6 +45,8 @@ export default {
   },
   methods: {
     async logout() {
+      // SPEC-062 — remove the previous user's local data before clearing auth.
+      wipeLocalUserData();
       await this.$auth.logout();
       await this.$auth.setUser(null);
       this.$toast.success(
