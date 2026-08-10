@@ -31,7 +31,7 @@
     <PayPal
       v-if="price"
       currency="USD"
-      env="production"
+      :env="paypalEnv"
       :amount="price"
       :client="paypalCredentials"
       :items="paypalItems"
@@ -59,11 +59,11 @@ export default {
     return {
       price: undefined, // Updated in created()
       paypalPaymentStatus: undefined,
+      paypalEnv: process.env.PAYPAL_ENV || 'production',
       paypalCredentials: {
-        sandbox:
-          "AWBk2Jn-5v79iEBjPLYuRWo7OHgSL4YJKfjCcxX4nWQbLJa5F9D57PrVYAMOEa7Alm5WUdYRW_2KJBTH",  // ken-facilitator@chinesezerotohero.com
-        production:
-          "AcLhxqFEKaIXIRDdaHlKM6h2kUwtgnBdYtaBozJkFy1-hlCpIYytxePBmluj0xr9bYVUIGw6AFb17IgV",  // ken@chinesezerotohero.com
+        sandbox: process.env.PAYPAL_SANDBOX_CLIENT_ID || '',
+        production: process.env.PAYPAL_CLIENT_ID ||
+          'AcLhxqFEKaIXIRDdaHlKM6h2kUwtgnBdYtaBozJkFy1-hlCpIYytxePBmluj0xr9bYVUIGw6AFb17IgV',
       },
       paypalItems: [
         {

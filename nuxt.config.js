@@ -178,6 +178,14 @@ export default {
     // nuxt-auth strategy always point at the same Flask server. Local dev:
     // PYTHON_SERVER=http://127.0.0.1:5001/ in .env (gitignored).
     PYTHON_SERVER: process.env.PYTHON_SERVER || 'https://python.zerotohero.ca/',
+    // PayPal client ids come from .env instead of being hardcoded in the
+    // component, so sandbox testing doesn't rot stale ids into source.
+    // Production id falls back to the long-standing live app id.
+    PAYPAL_ENV: process.env.PAYPAL_ENV || 'production',
+    PAYPAL_SANDBOX_CLIENT_ID: process.env.PAYPAL_SANDBOX_CLIENT_ID || '',
+    PAYPAL_CLIENT_ID:
+      process.env.PAYPAL_CLIENT_ID ||
+      'AcLhxqFEKaIXIRDdaHlKM6h2kUwtgnBdYtaBozJkFy1-hlCpIYytxePBmluj0xr9bYVUIGw6AFb17IgV',
     classicRegistrationDisabled:
       process.env.DISABLE_CLASSIC_REGISTRATION === "true",
   },
