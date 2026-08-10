@@ -28,23 +28,7 @@
         </p>
       </div>
     </div>
-    <PayPal
-      v-if="price"
-      currency="USD"
-      :env="paypalEnv"
-      :amount="price"
-      :client="paypalCredentials"
-      :items="paypalItems"
-      :experience="paypalExperienceOptions"
-      :button-style="{
-        shape: 'rect',
-        size: 'medium',
-        color: 'blue',
-      }"
-      @payment-authorized="onPayPalPaymentAuthorized"
-      @payment-completed="onPayPalPaymentCompleted"
-      @payment-cancelled="onPayPalPaymentCancelled"
-    ></PayPal>
+    <div v-if="price" ref="paypalButton" class="paypal-button-container"></div>
   </div>
 </template>
 
@@ -55,7 +39,6 @@ import { getPrices } from "../lib/prices";
 
 export default {
   data() {
-
     return {
       price: undefined, // Updated in created()
       paypalPaymentStatus: undefined,
@@ -64,74 +47,90 @@ export default {
         sandbox: process.env.PAYPAL_SANDBOX_CLIENT_ID || '',
         production: process.env.PAYPAL_CLIENT_ID || '',
       },
-      paypalItems: [
-        {
-          name: "zero-to-hero-pro",
-          description: "Language Player Pro features",
-          quantity: "1",
-          price: undefined, // Updated in created()
-          currency: "USD",
-        },
-      ],
-      paypalExperienceOptions: {
-        input_fields: {
-          no_shipping: 1,
-        },
-      },
     }
-  },
-  computed: {
   },
   async created() {
     try {
       const allPlans = await getPrices()
       const lifetimeUSDPlan = allPlans.find(price => price.status === 'current' && price.type === (SALE ? 'sale' : 'regular') && price.plan === 'lifetime' && price.currency === 'usd')
-      this.price = lifetimeUSDPlan.amount.toString()
-      this.paypalItems[0].price = lifetimeUSDPlan.amount.toString()
+      this.price = lifetimeUSDPlan.amount.toFixed(2)
     } catch (error) {
       console.error('Failed to fetch prices:', error)
     }
   },
+  mounted() {
+    this.renderPayPalButton()
+  },
   methods: {
-    onPayPalPaymentAuthorized(e) {
-      console.log({ paypalAuthorizedEvent: e });
-    },
-    onPayPalPaymentCompleted(e) {
-      if (e.state == "approved") {
-        // Payment successful
-        this.paypalPaymentStatus = "approved";
-        let paymentID = e.id;
-        window.location = `${PYTHON_SERVER}paypal_checkout_success?pay_id=${paymentID}&user_id=${this.$auth.user.id}&host=${HOST}`;
-      } else {
-        this.paypalPaymentStatus = "error";
-        // Payment unsuccessful
+    renderPayPalButton() {
+      if (!this.price) return
+      const clientId = this.paypalEnv === 'sandbox'
+        ? this.paypalCredentials.sandbox
+        : this.paypalCredentials.production
+      if (!clientId) {
+        console.error(`[PayPal] client id missing for env ${this.paypalEnv}`)
+        this.paypalPaymentStatus = 'error'
+        return
       }
+
+      const sdkBase = this.paypalEnv === 'sandbox'
+        ? 'https://www.sandbox.paypal.com/sdk/js'
+        : 'https://www.paypal.com/sdk/js'
+      const sdkUrl = `${sdkBase}?client-id=${clientId}&intent=capture&currency=USD&components=buttons`
+
+      const script = document.createElement('script')
+      script.src = sdkUrl
+      script.onload = () => {
+        try {
+          window.paypal.Buttons({
+            createOrder: async () => {
+              const res = await fetch(`${PYTHON_SERVER}create-paypal-order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  user_id: this.$auth.user && this.$auth.user.id,
+                  host: HOST,
+                  amount: this.price,
+                }),
+              })
+              if (!res.ok) {
+                throw new Error(`Failed to create PayPal order: ${res.status}`)
+              }
+              const data = await res.json()
+              return data.id
+            },
+            onApprove: (data) => {
+              this.paypalPaymentStatus = 'success'
+              window.location = `${PYTHON_SERVER}paypal_checkout_success?order_id=${data.orderID}&user_id=${this.$auth.user.id}&host=${HOST}`
+            },
+            onCancel: () => {
+              this.paypalPaymentStatus = 'cancelled'
+            },
+            onError: (err) => {
+              console.error('[PayPal] error:', err)
+              this.paypalPaymentStatus = 'error'
+            },
+          }).render(this.$refs.paypalButton)
+        } catch (err) {
+          console.error('[PayPal] render failed:', err)
+          this.paypalPaymentStatus = 'error'
+        }
+      }
+      script.onerror = () => {
+        console.error('[PayPal] SDK script failed to load')
+        this.paypalPaymentStatus = 'error'
+      }
+      document.head.appendChild(script)
     },
-    onPayPalPaymentCancelled(e) {
-      this.paypalPaymentStatus = "cancelled";
-      console.log({ paypalCancelledEvent: e });
-    },
-  }
-};
+  },
+}
 </script>
 
 <style lang="scss" scoped>
-.btn-purchase {
-  display: block;
-  width: 100%;
-  margin: 0.25rem auto 0.25rem auto;
-  text-align: left;
-  width: 15rem;
-  position: relative;
-  .icons {
-    width: 5rem;
-    display: inline-block;
-    text-align: center;
-  }
-  .fa-chevron-right {
-    position: absolute;
-    right: 0.75rem;
-    top: 0.75rem;
+.purchase-paypal {
+  .paypal-button-container {
+    max-width: 15rem;
+    margin: 0 auto;
   }
 }
 </style>

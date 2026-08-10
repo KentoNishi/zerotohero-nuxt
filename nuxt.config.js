@@ -717,7 +717,6 @@ export default {
     { src: "~/plugins/idle-vue.js", mode: "client" },
     { src: "~/plugins/ios-in-app-purchase.js", mode: "client" },
     { src: "~/plugins/main.js" },
-    { src: "~/plugins/paypal.js", mode: "client" },
     { src: "~/plugins/pwa-update.js", mode: "client" },
     { src: "~/plugins/shared-mutations.js", mode: "client" },
     { src: "~/plugins/stripe.js", mode: "client" },
