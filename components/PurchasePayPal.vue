@@ -43,6 +43,7 @@ export default {
       price: undefined, // Updated in created()
       paypalPaymentStatus: undefined,
       paypalRendered: false,
+      paypalLoading: false,
       paypalEnv: process.env.PAYPAL_ENV || 'production',
       paypalCredentials: {
         sandbox: process.env.PAYPAL_SANDBOX_CLIENT_ID || '',
@@ -56,7 +57,6 @@ export default {
       const lifetimeUSDPlan = allPlans.find(price => price.status === 'current' && price.type === (SALE ? 'sale' : 'regular') && price.plan === 'lifetime' && price.currency === 'usd')
       this.price = lifetimeUSDPlan.amount.toFixed(2)
       console.log('[LP Classic] PayPal price set:', this.price)
-      this.$nextTick(() => this.renderPayPalButton())
     } catch (error) {
       console.error('[LP Classic] PayPal failed to fetch prices:', error)
       this.paypalPaymentStatus = 'error'
@@ -72,12 +72,16 @@ export default {
   },
   methods: {
     renderPayPalButton() {
-      if (this.paypalRendered) return
-      this.paypalPaymentStatus = undefined // clear any stale warning
+      if (this.paypalRendered || this.paypalLoading) {
+        console.log('[LP Classic] PayPal render skipped (already rendering/rendered)')
+        return
+      }
       if (!this.price) {
         console.log('[LP Classic] PayPal price not ready yet, deferring render')
         return
       }
+      this.paypalLoading = true
+      this.paypalPaymentStatus = undefined // clear any stale warning
       const clientId = this.paypalEnv === 'sandbox'
         ? this.paypalCredentials.sandbox
         : this.paypalCredentials.production
@@ -99,6 +103,7 @@ export default {
       script.onload = () => {
         console.log('[LP Classic] PayPal SDK loaded')
         try {
+          if (this.paypalRendered) return
           const buttons = window.paypal.Buttons({
             createOrder: async () => {
               const userId = this.$auth.user && this.$auth.user.id
@@ -142,21 +147,26 @@ export default {
           if (renderResult && renderResult.then) {
             renderResult.then(() => {
               this.paypalRendered = true
+              this.paypalLoading = false
               console.log('[LP Classic] PayPal button rendered')
             }).catch((err) => {
+              this.paypalLoading = false
               console.error('[LP Classic] PayPal render failed:', err)
               this.paypalPaymentStatus = 'error'
             })
           } else {
             this.paypalRendered = true
+            this.paypalLoading = false
             console.log('[LP Classic] PayPal button rendered')
           }
         } catch (err) {
+          this.paypalLoading = false
           console.error('[LP Classic] PayPal render failed:', err)
           this.paypalPaymentStatus = 'error'
         }
       }
       script.onerror = () => {
+        this.paypalLoading = false
         // Don't show the red "payment failed" alert for a load failure — the
         // button is simply absent. Log loudly instead.
         console.error('[LP Classic] PayPal SDK script failed to load — button hidden')
