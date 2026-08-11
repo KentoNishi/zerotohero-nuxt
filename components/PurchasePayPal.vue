@@ -42,6 +42,7 @@ export default {
     return {
       price: undefined, // Updated in created()
       paypalPaymentStatus: undefined,
+      paypalRendered: false,
       paypalEnv: process.env.PAYPAL_ENV || 'production',
       paypalCredentials: {
         sandbox: process.env.PAYPAL_SANDBOX_CLIENT_ID || '',
@@ -54,21 +55,34 @@ export default {
       const allPlans = await getPrices()
       const lifetimeUSDPlan = allPlans.find(price => price.status === 'current' && price.type === (SALE ? 'sale' : 'regular') && price.plan === 'lifetime' && price.currency === 'usd')
       this.price = lifetimeUSDPlan.amount.toFixed(2)
+      console.log('[LP Classic] PayPal price set:', this.price)
+      this.$nextTick(() => this.renderPayPalButton())
     } catch (error) {
-      console.error('Failed to fetch prices:', error)
+      console.error('[LP Classic] PayPal failed to fetch prices:', error)
+      this.paypalPaymentStatus = 'error'
     }
   },
   mounted() {
     this.renderPayPalButton()
   },
+  watch: {
+    price() {
+      this.$nextTick(() => this.renderPayPalButton())
+    },
+  },
   methods: {
     renderPayPalButton() {
-      if (!this.price) return
+      if (this.paypalRendered) return
+      if (!this.price) {
+        console.log('[LP Classic] PayPal price not ready yet, deferring render')
+        return
+      }
       const clientId = this.paypalEnv === 'sandbox'
         ? this.paypalCredentials.sandbox
         : this.paypalCredentials.production
+      console.log('[LP Classic] PayPal env:', this.paypalEnv, 'clientId present:', !!clientId)
       if (!clientId) {
-        console.error(`[PayPal] client id missing for env ${this.paypalEnv}`)
+        console.error(`[LP Classic] PayPal client id missing for env ${this.paypalEnv}`)
         this.paypalPaymentStatus = 'error'
         return
       }
@@ -80,44 +94,69 @@ export default {
 
       const script = document.createElement('script')
       script.src = sdkUrl
+      console.log('[LP Classic] PayPal loading SDK:', sdkUrl)
       script.onload = () => {
+        console.log('[LP Classic] PayPal SDK loaded')
         try {
-          window.paypal.Buttons({
+          const buttons = window.paypal.Buttons({
             createOrder: async () => {
-              const res = await fetch(`${PYTHON_SERVER}create-paypal-order`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  user_id: this.$auth.user && this.$auth.user.id,
-                  host: HOST,
-                  amount: this.price,
-                }),
-              })
-              if (!res.ok) {
-                throw new Error(`Failed to create PayPal order: ${res.status}`)
+              const userId = this.$auth.user && this.$auth.user.id
+              console.log('[LP Classic] PayPal createOrder user:', userId, 'amount:', this.price)
+              try {
+                const res = await fetch(`${PYTHON_SERVER}create-paypal-order`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    user_id: userId,
+                    host: HOST,
+                    amount: this.price,
+                  }),
+                })
+                const data = await res.json()
+                console.log('[LP Classic] PayPal createOrder response:', res.status, data)
+                if (!res.ok) {
+                  throw new Error(`Failed to create PayPal order: ${res.status}`)
+                }
+                return data.id
+              } catch (err) {
+                console.error('[LP Classic] PayPal createOrder error:', err)
+                throw err
               }
-              const data = await res.json()
-              return data.id
             },
             onApprove: (data) => {
+              console.log('[LP Classic] PayPal approved order:', data.orderID)
               this.paypalPaymentStatus = 'success'
               window.location = `${PYTHON_SERVER}paypal_checkout_success?order_id=${data.orderID}&user_id=${this.$auth.user.id}&host=${HOST}`
             },
             onCancel: () => {
+              console.log('[LP Classic] PayPal cancelled')
               this.paypalPaymentStatus = 'cancelled'
             },
             onError: (err) => {
-              console.error('[PayPal] error:', err)
+              console.error('[LP Classic] PayPal error:', err)
               this.paypalPaymentStatus = 'error'
             },
-          }).render(this.$refs.paypalButton)
+          })
+          const renderResult = buttons.render(this.$refs.paypalButton)
+          if (renderResult && renderResult.then) {
+            renderResult.then(() => {
+              this.paypalRendered = true
+              console.log('[LP Classic] PayPal button rendered')
+            }).catch((err) => {
+              console.error('[LP Classic] PayPal render failed:', err)
+              this.paypalPaymentStatus = 'error'
+            })
+          } else {
+            this.paypalRendered = true
+            console.log('[LP Classic] PayPal button rendered')
+          }
         } catch (err) {
-          console.error('[PayPal] render failed:', err)
+          console.error('[LP Classic] PayPal render failed:', err)
           this.paypalPaymentStatus = 'error'
         }
       }
       script.onerror = () => {
-        console.error('[PayPal] SDK script failed to load')
+        console.error('[LP Classic] PayPal SDK script failed to load')
         this.paypalPaymentStatus = 'error'
       }
       document.head.appendChild(script)
