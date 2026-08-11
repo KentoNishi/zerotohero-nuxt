@@ -73,6 +73,7 @@ export default {
   methods: {
     renderPayPalButton() {
       if (this.paypalRendered) return
+      this.paypalPaymentStatus = undefined // clear any stale warning
       if (!this.price) {
         console.log('[LP Classic] PayPal price not ready yet, deferring render')
         return
@@ -90,7 +91,7 @@ export default {
       const sdkBase = this.paypalEnv === 'sandbox'
         ? 'https://www.sandbox.paypal.com/sdk/js'
         : 'https://www.paypal.com/sdk/js'
-      const sdkUrl = `${sdkBase}?client-id=${clientId}&intent=capture&currency=USD&components=buttons`
+      const sdkUrl = `${sdkBase}?client-id=${clientId}&intent=capture&currency=USD&components=buttons&disable-funding=card,credit,paylater`
 
       const script = document.createElement('script')
       script.src = sdkUrl
@@ -156,8 +157,9 @@ export default {
         }
       }
       script.onerror = () => {
-        console.error('[LP Classic] PayPal SDK script failed to load')
-        this.paypalPaymentStatus = 'error'
+        // Don't show the red "payment failed" alert for a load failure — the
+        // button is simply absent. Log loudly instead.
+        console.error('[LP Classic] PayPal SDK script failed to load — button hidden')
       }
       document.head.appendChild(script)
     },
