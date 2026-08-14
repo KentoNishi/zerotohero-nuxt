@@ -1,5 +1,5 @@
 <template>
-  <client-only>
+  <client-only :placeholder="'\u200B'" placeholder-tag="span">
     <button class="speak focus-exclude" @click.stop.prevent="onClick">
       <i :class="`fas fa-${mp3 ? 'headphones': 'volume-up'}`" v-if="canSpeak"></i>
       <span v-else-if="forvo">

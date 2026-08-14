@@ -1,5 +1,5 @@
 <template>
-  <client-only>
+  <client-only :placeholder="'\u200B'" placeholder-tag="span">
     <div class="toggle-saved-word focus-exclude">
       <i class="fas fa-star star-animation animate" style="pointer-events: none"></i>
       <button

@@ -21,7 +21,12 @@
     </span>
     <Locale class="statistics-item" v-if="item.locale" :locale="item.locale" />
     <span>
-      <router-link class="statistics-item" v-if="item.category && CATEGORIES[item.category]" :to="{ name: 'category', params: { slug: item.category } }" style="color: inherit">
+      <router-link
+        class="statistics-item"
+        v-if="item.category && CATEGORIES[item.category] && categoryRoute"
+        :to="categoryRoute"
+        style="color: inherit"
+      >
         {{ $t(CATEGORIES[item.category]) }}
       </router-link>
     </span>
@@ -65,6 +70,17 @@ export default {
   },
   computed: {
     ...mapState("shows", ["categories"]),
+    categoryRoute() {
+      if (!this.$l1 || !this.$l2) return null;
+      return {
+        name: "l1-l2-category-slug",
+        params: {
+          l1: this.$l1.code,
+          l2: this.$l2.code,
+          slug: this.item.category,
+        },
+      };
+    },
   },
   methods: {
     level,

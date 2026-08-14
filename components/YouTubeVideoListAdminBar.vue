@@ -1,5 +1,5 @@
 <template>
-  <client-only>
+  <client-only :placeholder="'\u200B'" placeholder-tag="span">
     <div
       v-if="$adminMode && showAdminToolsInAdminMode"
       class="mb-4 bg-accent rounded p-3 w-100"

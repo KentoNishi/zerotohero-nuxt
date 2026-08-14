@@ -344,11 +344,6 @@ export default {
           component: "./pages/_l1/_l2/phrase/search/_term",
         },
         {
-          name: "l1-l2-phrasebook-bookId-phraseId",
-          path: "/:l1/:l2/phrasebook/:bookId/:phraseId/:phrase?",
-          component: "./pages/_l1/_l2/phrasebook/_bookId/_phraseId",
-        },
-        {
           name: "l1-l2-tv-shows",
           path: "/:l1/:l2/tv-shows/:category?/:tag?/:level?",
           component: "./pages/_l1/_l2/tv-shows",
@@ -397,6 +392,21 @@ export default {
           };
         }
       }
+
+      // The phrasebook phrase route is auto-generated as a child of
+      // l1-l2-phrasebook-bookId. Extend it with the optional trailing phrase
+      // segment in place, instead of adding a same-named top-level route
+      // (which triggers vue-router's duplicate named route warning).
+      const phrasebookParent = routes.find(
+        (r) => r.name === "l1-l2-phrasebook-bookId"
+      );
+      const phrasebookPhrase = phrasebookParent?.children?.find(
+        (r) => r.name === "l1-l2-phrasebook-bookId-phraseId"
+      );
+      if (phrasebookPhrase) {
+        phrasebookPhrase.path = ":phraseId?/:phrase?";
+      }
+
       routes.forEach(route => {
         route.props = true; // Enable props throughout
         route.path = route.path?.replace('/:l2?', '/:l2'); // Make sure l2 is required
