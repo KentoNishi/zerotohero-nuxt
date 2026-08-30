@@ -343,7 +343,11 @@ export default {
 
       // CSV 化
       let csv = Papa.unparse(csvWords, { columns });
-      csv = csv.replace(/v-lazy-load data-src=/g, "src=");
+      // No image content in exported Anki cards (2026-08-30): strip any <img>
+      // tag that leaks from saved-word data. This also removes the previous
+      // `v-lazy-load data-src=` → `src=` conversion that turned Vue lazy-load
+      // markup into real <img src="..."> tags in the export.
+      csv = csv.replace(/<img[^>]*>/gi, "");
 
       return csv;
     },

@@ -1,25 +1,21 @@
 <template>
-  <div
-    :class="{'image-wall': true, 'image-wall-hover': hover}"
-    :key="`web-images-${text}`"
+  <!-- In-app image search removed (2026-08-30): the image gallery is gone and
+       only a "search image" link (Google Images) is shown. The component keeps
+       its name/props so consumers don't break; it no longer fetches the Flask
+       /images endpoint (which is disabled). -->
+  <a
+    v-if="text"
+    :href="googleImagesUrl"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="search-image-link"
     v-cloak
-    v-if="images && images.length > 0"
   >
-    <img
-      alt
-      class="image-wall-image"
-      v-for="(image, index) in images.slice(0, limit)"
-      :key="`web-images-${text}-${index}`"
-      :src="`${IMAGE_PROXY}?${image.src}`"
-      @click="goto(image.url)"
-    />
-  </div>
+    {{ searchLabel }}
+  </a>
 </template>
 
 <script>
-import WordPhotos from "../lib/word-photos";
-import { IMAGE_PROXY } from "../lib/utils";
-
 export default {
   props: {
     text: {
@@ -37,68 +33,37 @@ export default {
     },
     link: {
       type: Boolean,
-      default: true
+      default: true,
     },
     hover: {
       type: Boolean,
-      default: true
-    }
+      default: true,
+    },
   },
   data() {
     return {
-      IMAGE_PROXY,
-      images: [],
+      searchLabel: "Search image",
     };
   },
-  async created() {
-    if (this.preloaded && this.preloaded.length > 0)
-      this.images = this.preloaded;
-    else {
-      let scraped = await WordPhotos.getGoogleImages({
-        term: this.text,
-        lang: this.$l2.code,
-      });
-      let images = scraped.slice(0, this.limit);
-      this.images = images;
-      this.$emit("loaded", this.images);
-    }
-  },
-  methods: {
-    goto(url) {
-      if (this.link) window.open(url);
+  computed: {
+    googleImagesUrl() {
+      return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(this.text)}`;
     },
+  },
+  created() {
+    // Emit an empty result for consumers that observe the wall's loaded event.
+    this.$emit("loaded", []);
   },
 };
 </script>
 
 <style lang="scss" scoped>
-.image-wall {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.image-wall-hover:hover img {
-  opacity: 0.5;
-  &:hover {
-    opacity: 1;
-    transform: scale(1.3);
-    z-index: 5;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-    transition: 200ms all ease;
-  }
-}
-
-.image-wall-image {
-  object-fit: cover;
-  flex: 1;
-  height: 7.5rem;
-  width: auto;
-  background-color: #f5f5f5;
-  cursor: pointer;
-  margin: 0.2rem;
-  max-width: 15rem;
-}
-.image-wall-image:last-child {
-  flex: 0;
+.search-image-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  text-decoration: underline;
 }
 </style>
